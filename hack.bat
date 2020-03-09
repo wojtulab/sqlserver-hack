@@ -1,7 +1,7 @@
 @ECHO OFF
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::: 				   WK				                :::
-::: 	Last update: 2020-02-18     v6                  :::
+::: 	Last update: 2020-03-09     v6                  :::
 :::                                                     :::
 ::: please contact: kucyk87@gmail.com         			:::
 :::                        WK                           :::
@@ -20,6 +20,8 @@ echo ------------------------------
 echo current hostname:
 hostname
 echo ------------------------------
+sc query |findstr .SQLB. >nul && Echo.SQLBrowser is running. && set _browser=1 || Echo.SQLBrowser is disabled. && set _browser=0
+
 
 :Menu
 echo.1) generate scripts
@@ -122,7 +124,8 @@ goto %goto%
 :browser
 cls
 echo scanning for sql services...
-call PortQry.exe -n localhost -p udp -o 1434 | findstr "ServerName InstanceName tcp Version"
+if %_browser% equ 1 (call PortQry.exe -n localhost -p udp -o 1434 | findstr "ServerName InstanceName tcp Version") ELSE (echo.SQLBrowser is disabled.)
+
 goto ChooseSQL
 
 :Specified
@@ -140,6 +143,7 @@ goto Nextstuff
 
 :Nextstuff
 cls
+if %_browser% equ 1 (
 echo ----------------REMEMBER to use: -------------------------
 echo.
 echo current version:
@@ -149,8 +153,9 @@ echo "<= 10.5 version -> using psexec method from generated script"
 echo ">= 11.0 version -> using writer method from generated script"
 echo.
 echo ----------------REMEMBER ----------------------------------
+) 
 set sc=..\fullscript.txt
-echo PSEXEC method: > %sc%
+echo "for <= 10.5 version -> use PSEXEC method:" >> %sc%
 echo "%cd%\psexec.exe" -accepteula -i -s -d sqlcmd.exe -S %sqlc% -E -i %cd%\psexec.sql >> %sc%
 FOR /F "tokens=* USEBACKQ" %%F IN (`where SQLCMD.exe`) DO ( SET scmd=%%F )
 FOR /F "tokens=* USEBACKQ" %%F IN (`whoami`) DO ( SET who=%%F )
@@ -158,7 +163,7 @@ set who=%who: =%
 set query=CREATE LOGIN [%who%] from windows; ALTER SERVER ROLE sysadmin ADD MEMBER [%who%];
 set regp=HKLM\SYSTEM\CurrentControlSet\Services\SQLWriter
 echo ------------------------------- >> %sc%
-echo sqlcmd method: >> %sc%
+echo "for >= 11.0 version -> sqlcmd method:" >> %sc%
 echo REG EXPORT %regp% C:\temp\sql.reg /y >> %sc%
 echo ----START >> %sc%
 echo reg add %regp% /v ImagePath /d """"%scmd%""" -S %sqlc% -E -Q """%query%"" /f >> %sc%
