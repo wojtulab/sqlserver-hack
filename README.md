@@ -32,3 +32,5 @@ REG IMPORT C:\temp\sql.reg
 to test use: 
 sqlcmd.exe -S SQL2019s.contoso.com -h -1 -E -i C:\WK_Scripts\_Projects\LostPassword\slim\bin\chck.sql 
 ```
+# changelog 
+-=version 1.0=-
