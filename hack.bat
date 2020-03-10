@@ -17,12 +17,24 @@ PAUSE
 cls
 echo.
 echo ------------------------------
-echo current hostname:
-hostname
+echo current hostname: %COMPUTERNAME%
 echo ------------------------------
+:Scan
 sc query |findstr .SQLB. >nul && Echo.SQLBrowser is running. && set _browser=1 || Echo.SQLBrowser is disabled. && set _browser=0
-
-
+tasklist | findstr sqlservr.exe >null && echo.SQL proccess sqlservr.exe is running. && set _sqlserv=1 || echo sqlservr.exe process is not running && set _sqlserv=0
+if %_sqlserv% equ 1 (
+echo ------------------------------
+echo.registry scan...
+for /f "tokens=2*" %%a in ('REG QUERY HKLM\SYSTEM\CurrentControlSet\Services\MSSQLServer /v DisplayName') do echo service name: %%b
+echo.
+for /f "tokens=2*" %%a in ('REG QUERY HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\MSSQLServer\Setup /v SqlPath') do echo.Path: %%b
+echo.
+for /f "tokens=2*" %%a in ('REG QUERY HKLM\SYSTEM\CurrentControlSet\Services\MSSQLServer /v ImagePath') do  echo.Bin: %%b
+echo.
+echo.SQLserver ports:
+for /f "tokens=2*" %%a in ('tasklist /svc ^| findstr sqlser') do ( netstat -ano | findstr %%a | findstr LIST. )
+) ELSE ( echo.sqlservr.exe process is not running )
+echo ==========================================
 :Menu
 echo.1) generate scripts
 echo.2) exit
@@ -112,6 +124,7 @@ echo.1) use default: %COMPUTERNAME%
 echo.2) use named sql: %sqlc%
 echo.3) use another instance...
 echo.4) use browser to scan local instances
+echo.5) scan for open ports if process running
 set menu=
 choice /c 1234 /n /m "Choose a task"
 set menu=%errorlevel%
