@@ -32,9 +32,13 @@ REG IMPORT C:\temp\sql.reg
 to test use: 
 sqlcmd.exe -S SQL2019s.contoso.com -h -1 -E -i C:\WK_Scripts\_Projects\LostPassword\slim\bin\chck.sql 
 ```
+# screens
+![screen1: scan for sql](https://github.com/wojtulab/sqlserver-hack/blob/master/screen1.jpg)
+![screen2: generate recovery script]https://github.com/wojtulab/sqlserver-hack/blob/master/screen2.jpg)
+
 # changelog 
 -=version 1.0=-
-added:
++ added:
 + scan for browser;
 + scan for sqlservr.exe;
 + scan for open ports;
