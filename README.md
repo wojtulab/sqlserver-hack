@@ -35,7 +35,7 @@ sqlcmd.exe -S SQL2019s.contoso.com -h -1 -E -i C:\WK_Scripts\_Projects\LostPassw
 # changelog 
 -=version 1.0=-
 added:
-scan for browser;
-scan for sqlservr.exe;
-scan for open ports;
-scan for registry entries
++ scan for browser;
++ scan for sqlservr.exe;
++ scan for open ports;
++ scan for registry entries
