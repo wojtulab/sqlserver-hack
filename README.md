@@ -34,7 +34,7 @@ sqlcmd.exe -S SQL2019s.contoso.com -h -1 -E -i C:\WK_Scripts\_Projects\LostPassw
 ```
 # screens
 ![screen1: scan for sql](https://github.com/wojtulab/sqlserver-hack/blob/master/screen1.jpg)
-![screen2: generate recovery script]https://github.com/wojtulab/sqlserver-hack/blob/master/screen2.jpg)
+![screen2: generate recovery script](https://github.com/wojtulab/sqlserver-hack/blob/master/screen2.jpg)
 
 # changelog 
 -=version 1.0=-
