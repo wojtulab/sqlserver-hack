@@ -31,11 +31,11 @@ echo ------------------------------
 echo.[2/4] registry scan (if hives exists)
 ( for /f "tokens=2*" %%a in ('REG QUERY HKLM\SYSTEM\CurrentControlSet\Services\MSSQLServer /v DisplayName') do echo service name: %%b ) 2> nul && ( for /f "tokens=2*" %%a in ('REG QUERY HKLM\SYSTEM\CurrentControlSet\Services\MSSQLServer /v DisplayName') do echo service name: %%b )
 ( for /f "tokens=2*" %%a in ('REG QUERY HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\MSSQLServer\Setup /v SqlPath') do echo.Path: %%b ) 2> nul && ( for /f "tokens=2*" %%a in ('REG QUERY HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\MSSQLServer\Setup /v SqlPath') do echo.Path: %%b )
-( for /f "tokens=2*" %%a in ('REG QUERY HKLM\SYSTEM\CurrentControlSet\Services\MSSQLServer /v ImagePath') do  echo.Bin: %%b ) 2> nul && ( for /f "tokens=2*" %%a in ('REG QUERY HKLM\SYSTEM\CurrentControlSet\Services\MSSQLServer /v ImagePath') do  echo.Bin: %%b )
+( for /f "tokens=2*" %%a in ('REG QUERY HKLM\SYSTEM\CurrentControlSet\Services\MSSQLServer /v ImagePath') do  echo.Bin: %%b ) 2> nul && ( for /f "tokens=2*" %%a in ('REG QUERY HKLM\SYSTEM\CurrentControlSet\Services\MSSQLServer /v ImagePath') do  echo.Bin: %%b ) || echo SQL server is not detected. Skipping scan 1, 2.
 echo.
 echo ------------------------------
 echo [3/4] WMI scan...
-call cscript /Nologo discovery.vbs
+call cscript /Nologo discovery.vbs 2> null || echo SQL server is not detected. Skipping
 echo ------------------------------
 echo.[4/4]SQLserver scan ports:
 for /f "tokens=2*" %%a in ('tasklist /svc ^| findstr sqlser') do ( netstat -ano | findstr %%a | findstr LIST. )
@@ -61,6 +61,7 @@ exit
 
 :fullwmi
 FOR /F "tokens=* USEBACKQ" %%F IN (`call PortQry.exe -n localhost -p udp -o 1434 ^| findstr "Version"`) DO ( SET _v=%%F )
+IF [%_v%] == [] echo.SQLserver not detected. && goto Menu
 echo version: %_v% and major version is: %_v:~8,2%)
 set /p versionwmi=SQL version (major):
 IF [%versionwmi%] == [] echo.empty version, skipping && goto Menu
