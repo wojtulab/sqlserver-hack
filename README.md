@@ -1,5 +1,5 @@
 # sqlserver-hack
-Recover access to MsSQL server
+Recover access to MsSQL server using psexec (system account) or SQLwriter.
 
 # INFO
 Script produce txt file (fullscript.txt) with prepared commands to recover access to specified SQL server instnace.
@@ -37,9 +37,14 @@ sqlcmd.exe -S SQL2019s.contoso.com -h -1 -E -i C:\WK_Scripts\_Projects\LostPassw
 ![screen2: generate recovery script](https://github.com/wojtulab/sqlserver-hack/blob/master/screen2.jpg)
 
 # changelog 
--=version 1.0=-
++ -=version 1.0=-
 + added:
 + scan for browser;
 + scan for sqlservr.exe;
 + scan for open ports;
 + scan for registry entries
+
+++ -=version 1.1=-
++ added:
++ scan for WMI
++ scan for Windows Registry
