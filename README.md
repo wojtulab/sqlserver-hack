@@ -33,8 +33,7 @@ to test use:
 sqlcmd.exe -S SQL2019s.contoso.com -h -1 -E -i C:\WK_Scripts\_Projects\LostPassword\slim\bin\chck.sql 
 ```
 # screens
-![screen1: scan for sql](https://github.com/wojtulab/sqlserver-hack/blob/master/screen1.jpg)
-![screen2: generate recovery script](https://github.com/wojtulab/sqlserver-hack/blob/master/screen2.jpg)
+![screen1: scan for sql](https://github.com/wojtulab/sqlserver-hack/blob/master/screen.jpg)
 
 # changelog 
 + -=version 1.0=-
