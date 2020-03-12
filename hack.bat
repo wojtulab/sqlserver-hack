@@ -22,42 +22,57 @@ echo ------------------------------
 :Scan
 sc query |findstr .SQLB. >nul && Echo.SQLBrowser is running. && set _browser=1 || Echo.SQLBrowser is disabled. && set _browser=0
 tasklist | findstr sqlservr.exe >null && echo.SQL proccess sqlservr.exe is running. && set _sqlserv=1 || echo sqlservr.exe process is not running && set _sqlserv=0
+echo.---------------
 if %_sqlserv% equ 1 (
+echo.
+echo.[1/4] Running SQL Services scan: && sc query | findstr /R [a-z]*MSSQLSERVER | findstr SERVICE | findstr /V Launcher >nul && ( sc query | findstr /R [a-z]*MSSQLSERVER | findstr SERVICE | findstr /V Launcher )
+sc query | findstr .MSSQL$. | findstr SERVICE | findstr /V Launcher >nul && ( sc query | findstr .MSSQL$. | findstr SERVICE | findstr /V Launcher )
 echo ------------------------------
-echo.registry scan...
-for /f "tokens=2*" %%a in ('REG QUERY HKLM\SYSTEM\CurrentControlSet\Services\MSSQLServer /v DisplayName') do echo service name: %%b
+echo.[2/4] registry scan (if hives exists)
+( for /f "tokens=2*" %%a in ('REG QUERY HKLM\SYSTEM\CurrentControlSet\Services\MSSQLServer /v DisplayName') do echo service name: %%b ) 2> nul && ( for /f "tokens=2*" %%a in ('REG QUERY HKLM\SYSTEM\CurrentControlSet\Services\MSSQLServer /v DisplayName') do echo service name: %%b )
+( for /f "tokens=2*" %%a in ('REG QUERY HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\MSSQLServer\Setup /v SqlPath') do echo.Path: %%b ) 2> nul && ( for /f "tokens=2*" %%a in ('REG QUERY HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\MSSQLServer\Setup /v SqlPath') do echo.Path: %%b )
+( for /f "tokens=2*" %%a in ('REG QUERY HKLM\SYSTEM\CurrentControlSet\Services\MSSQLServer /v ImagePath') do  echo.Bin: %%b ) 2> nul && ( for /f "tokens=2*" %%a in ('REG QUERY HKLM\SYSTEM\CurrentControlSet\Services\MSSQLServer /v ImagePath') do  echo.Bin: %%b )
 echo.
-for /f "tokens=2*" %%a in ('REG QUERY HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\MSSQLServer\Setup /v SqlPath') do echo.Path: %%b
-echo.
-for /f "tokens=2*" %%a in ('REG QUERY HKLM\SYSTEM\CurrentControlSet\Services\MSSQLServer /v ImagePath') do  echo.Bin: %%b
-echo.
-echo.SQLserver ports:
+echo ------------------------------
+echo [3/4] WMI scan...
+call cscript /Nologo discovery.vbs
+echo ------------------------------
+echo.[4/4]SQLserver scan ports:
 for /f "tokens=2*" %%a in ('tasklist /svc ^| findstr sqlser') do ( netstat -ano | findstr %%a | findstr LIST. )
 ) ELSE ( echo.sqlservr.exe process is not running )
 echo ==========================================
 :Menu
 echo.1) generate scripts
-echo.2) exit
+echo.2) use browser to scan local instances
+echo.3) use full WMI scan local instances (with sql 'MAJOR VERSION' from above)
+echo.4) exit
 set menu=
-choice /c 12 /n /m "Choose a task"
+choice /c 1234 /n /m "Choose a task"
 set menu=%errorlevel%
 if errorlevel 1 set goto=fullscript
-if errorlevel 2 set goto=quit
+if errorlevel 2 set goto=browser
+if errorlevel 3 set goto=fullwmi
+if errorlevel 4 set goto=quit
 cls
 goto %goto%
 
 :quit
 exit
 
+:fullwmi
+FOR /F "tokens=* USEBACKQ" %%F IN (`call PortQry.exe -n localhost -p udp -o 1434 ^| findstr "Version"`) DO ( SET _v=%%F )
+echo version: %_v% and major version is: %_v:~8,2%)
+set /p versionwmi=SQL version (major):
+IF [%versionwmi%] == [] echo.empty version, skipping && goto Menu
+call cscript /Nologo discover_full.vbs %versionwmi%
+goto Menu
+
 :fullscript
-::Scanning for SQL services:
-::sc query | findstr /R [a-z]*MSSQLSERVER | findstr SERVICE | findstr /V Launcher >nul && ( goto Default)
-::sc query | findstr .MSSQL$. | findstr SERVICE | findstr /V Launcher >nul && ( goto Named )
 setlocal enabledelayedexpansion
     ::incremental varibale
     set "i=0"
     ::store filenames into array
-    echo Default MsSQL instances:
+    ::echo Default MsSQL instances:
 	for /f "tokens=*" %%f in ('sc query ^| findstr /R [a-z]*MSSQLSERVER ^| findstr SERVICE ^| findstr /V Launcher') do (
       set arr[!i!]=%%f & set /a "i+=1"
     )
@@ -69,7 +84,7 @@ setlocal enabledelayedexpansion
     set /a "i+=1"
 	if %i% neq %len% goto:loop
 	:wynikdef
-	echo Founded SQL services: !i!
+	echo Default MsSQL instances: !i!
   endlocal
   ::another way to create array arr.!i!=%%f
 ::NAMED SQL SERVICES:
@@ -78,7 +93,7 @@ setlocal enabledelayedexpansion
     set "i=0"
     ::store filenames into array
 	echo.
-	echo Named MsSQL instances:
+	::echo Named MsSQL instances:
     for /f "tokens=*" %%f in ('sc query ^| findstr .MSSQL$. ^| findstr SERVICE ^| findstr /V Launcher') do (
       set arr[!i!]=%%f & set /a "i+=1"
     )
@@ -95,7 +110,7 @@ setlocal enabledelayedexpansion
 	set /a "i+=1"
 	if %i% neq %len% goto:loop2
 	:wyniknam
-	 echo Founded SQL services: !i!
+	 echo Named MsSQL instances: !i!
   Endlocal&( set "sqlc=%COMPUTERNAME%%snamed%"
 	)
   goto ChooseSQL
@@ -123,23 +138,20 @@ echo.
 echo.1) use default: %COMPUTERNAME%
 echo.2) use named sql: %sqlc%
 echo.3) use another instance...
-echo.4) use browser to scan local instances
-echo.5) scan for open ports if process running
+
 set menu=
-choice /c 1234 /n /m "Choose a task"
+choice /c 123 /n /m "Choose a task"
 set menu=%errorlevel%
 if errorlevel 1 set goto=Nextstuff1
 if errorlevel 2 set goto=Nextstuff2
 if errorlevel 3 set goto=Specified
-if errorlevel 4 set goto=browser
 goto %goto%
 
 :browser
 cls
-echo scanning for sql services...
-if %_browser% equ 1 (call PortQry.exe -n localhost -p udp -o 1434 | findstr "ServerName InstanceName tcp Version") ELSE (echo.SQLBrowser is disabled.)
-
-goto ChooseSQL
+echo scanning Microsoft SQLBROWSER for sql services...
+if %_browser% equ 1 (call PortQry.exe -n localhost -p udp -o 1434 | findstr "ServerName InstanceName tcp Version") ELSE (echo.SQLBrowser is disabled. Starting... && ( net start SQLBrowser 2> nul && call PortQry.exe -n localhost -p udp -o 1434 ) )
+goto Menu
 
 :Specified
 set /p sqlc=please type connection string/instance name:
