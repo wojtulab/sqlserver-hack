@@ -40,21 +40,36 @@ echo ------------------------------
 echo.[4/4]SQLserver scan ports:
 for /f "tokens=2*" %%a in ('tasklist /svc ^| findstr sqlser') do ( netstat -ano | findstr %%a | findstr LIST. )
 ) ELSE ( echo.sqlservr.exe process is not running )
+
 echo ==========================================
 :Menu
 echo.1) generate scripts
 echo.2) use browser to scan local instances
 echo.3) use full WMI scan local instances (with sql 'MAJOR VERSION' from above)
-echo.4) exit
+echo.4) use sqlcmd to scan all protocols (tcp, name pipe and local)
+echo.5) exit
 set menu=
-choice /c 1234 /n /m "Choose a task"
+choice /c 12345 /n /m "Choose a task"
 set menu=%errorlevel%
 if errorlevel 1 set goto=fullscript
 if errorlevel 2 set goto=browser
 if errorlevel 3 set goto=fullwmi
-if errorlevel 4 set goto=quit
+if errorlevel 4 set goto=Protocols
+if errorlevel 5 set goto=quit
 cls
 goto %goto%
+
+:Protocols
+set /p sqlt=please type connection string/instance name:
+echo sqlcmd -S np:%sqlt%
+( call sqlcmd -h -1 -S %sqlt% -Q "set nocount on; print 'connected';" 2>nul ) && echo.tcp is ok || echo.tcp not ok
+echo --
+echo sqlcmd -S np:%sqlt%
+( call sqlcmd -h -1 -S np:%sqlt% -Q "set nocount on; print 'connected';" 2>nul ) && echo.Name Pipe is ok || echo.Name Pipe not ok
+echo --
+echo sqlcmd -S lpc:%sqlt%
+( call sqlcmd -h -1 -S lpc:%sqlt% -Q "set nocount on; print 'connected';" 2>nul ) && echo.Local protocol is ok || echo.Local protocol not ok
+goto Menu
 
 :quit
 exit
@@ -133,6 +148,13 @@ setlocal enabledelayedexpansion
 ::goto ChooseSQL
 
 :ChooseSQL
+echo.
+echo.Protocols check:
+echo sqlcmd -S np:%sqlc%
+( call sqlcmd -h -1 -S np:%sqlc% -Q "set nocount on; print 'connected';" 2>nul ) && echo.Name Pipe is ok || echo.Name Pipe not ok
+echo --
+echo sqlcmd -S lpc:%sqlc%
+( call sqlcmd -h -1 -S lpc:%sqlc% -Q "set nocount on; print 'connected';" 2>nul ) && echo.Local protocol is ok || echo.Local protocol not ok
 echo.
 echo.1) use default: %COMPUTERNAME%
 echo.2) use named sql: %sqlc%
