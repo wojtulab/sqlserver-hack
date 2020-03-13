@@ -1,7 +1,7 @@
 @ECHO OFF
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::: 				   WK				                :::
-::: 	Last update: 2020-03-09     v6                  :::
+::: 	Last update: 2020-03-13     v1.1                :::
 :::                                                     :::
 ::: please contact: kucyk87@gmail.com         			:::
 :::                        WK                           :::
@@ -60,9 +60,7 @@ goto %goto%
 exit
 
 :fullwmi
-FOR /F "tokens=* USEBACKQ" %%F IN (`call PortQry.exe -n localhost -p udp -o 1434 ^| findstr "Version"`) DO ( SET _v=%%F )
-IF [%_v%] == [] echo.SQLserver not detected. && goto Menu
-echo version: %_v% and major version is: %_v:~8,2%)
+call cscript /Nologo discovery.vbs 2> null || echo SQL server is not detected. Skipping
 set /p versionwmi=SQL version (major):
 IF [%versionwmi%] == [] echo.empty version, skipping && goto Menu
 call cscript /Nologo discover_full.vbs %versionwmi%
@@ -180,7 +178,8 @@ echo ">= 11.0 version -> using writer method from generated script"
 echo.
 echo ----------------REMEMBER ----------------------------------
 ) 
-set sc=..\fullscript.txt
+set sc=fullscript.txt
+set tst=test-if-iam-sysadmin.bat
 echo "for <= 10.5 version -> use PSEXEC method:" >> %sc%
 echo "%cd%\psexec.exe" -accepteula -i -s -d sqlcmd.exe -S %sqlc% -E -i %cd%\psexec.sql >> %sc%
 FOR /F "tokens=* USEBACKQ" %%F IN (`where SQLCMD.exe`) DO ( SET scmd=%%F )
@@ -203,10 +202,11 @@ echo %query% > %cd%\psexec.sql
 echo ----TEST: >> %sc%
 echo to test use: >> %sc%
 echo sqlcmd.exe -S %sqlc% -h -1 -E -i %cd%\chck.sql >> %sc%
-echo @echo off > ..\test-if-iam-sysadmin.bat
-echo cmd /k sqlcmd.exe -S %sqlc% -h -1 -E -i %cd%\chck.sql >> ..\test-if-iam-sysadmin.bat
+echo @echo off > %tst%
+echo cmd /k sqlcmd.exe -S %sqlc% -h -1 -E -i %cd%\chck.sql >> %tst%
 echo.
 echo done, script %sc% generated. Any key go to MENU.
+echo. you can test after applaying script via test-if-iam-sysadmin.bat
 PAUSE
 cls
 goto Menu
