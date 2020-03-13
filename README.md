@@ -1,5 +1,5 @@
 # sqlserver-hack
-Recover access to MsSQL server using psexec (system account) or SQLwriter.
+Simple debug connection and recover access to MsSQL server using psexec (system account) or SQLwriter.
 
 # INFO
 Script produce txt file (fullscript.txt) with prepared commands to recover access to specified SQL server instnace.
