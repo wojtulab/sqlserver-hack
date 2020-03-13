@@ -11,7 +11,7 @@ Just copy all files to any directory
 Open START file then it will open with admin rights hack.bat script.
 
 # KNOWN BUGS
---Clusters
++ Clusters discovery (listing details)
 
 # EXAMPLE
 Genereted fullscript.txt file content:
