@@ -47,3 +47,4 @@ sqlcmd.exe -S SQL2019s.contoso.com -h -1 -E -i C:\WK_Scripts\_Projects\LostPassw
 + added:
 + scan for WMI
 + scan for Windows Registry
++ scan for protocols: tcp, name pipe and local
