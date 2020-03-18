@@ -21,17 +21,21 @@ echo current hostname: %COMPUTERNAME%
 echo ------------------------------
 :Scan
 sc query |findstr .SQLB. >nul && Echo.SQLBrowser is running. && set _browser=1 || Echo.SQLBrowser is disabled. && set _browser=0
-tasklist | findstr sqlservr.exe >null && echo.SQL proccess sqlservr.exe is running. && set _sqlserv=1 || echo sqlservr.exe process is not running && set _sqlserv=0
+FOR /F "tokens=* USEBACKQ" %%F IN (`tasklist ^| findstr sqlservr.exe ^| find /c /v ""`) DO ( SET sqlcount=%%F )
+FOR /F "tokens=* USEBACKQ" %%F IN (`sc query ^|findstr ClusSv. ^| find /c /v ""`) DO ( SET sqlclust=%%F )
+tasklist | findstr sqlservr.exe >null && echo.SQL proccess sqlservr.exe is running. (%sqlcount% proces(s)) && set _sqlserv=1 || echo sqlservr.exe process is not running && set _sqlserv=0
+IF %sqlcount% gtr 1 ( echo INFO: more than one instance is running. )
+IF %sqlclust% geq 1 ( echo INFO: more than one instance is CLUSTERED.)
 echo.---------------
 if %_sqlserv% equ 1 (
 echo.
 echo.[1/4] Running SQL Services scan: && sc query | findstr /R [a-z]*MSSQLSERVER | findstr SERVICE | findstr /V Launcher >nul && ( sc query | findstr /R [a-z]*MSSQLSERVER | findstr SERVICE | findstr /V Launcher )
 sc query | findstr .MSSQL$. | findstr SERVICE | findstr /V Launcher >nul && ( sc query | findstr .MSSQL$. | findstr SERVICE | findstr /V Launcher )
 echo ------------------------------
-echo.[2/4] registry scan (if hives exists)
+echo.[2/4] registry scan ( if hives exists )
 ( for /f "tokens=2*" %%a in ('REG QUERY HKLM\SYSTEM\CurrentControlSet\Services\MSSQLServer /v DisplayName') do echo service name: %%b ) 2> nul && ( for /f "tokens=2*" %%a in ('REG QUERY HKLM\SYSTEM\CurrentControlSet\Services\MSSQLServer /v DisplayName') do echo service name: %%b )
 ( for /f "tokens=2*" %%a in ('REG QUERY HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\MSSQLServer\Setup /v SqlPath') do echo.Path: %%b ) 2> nul && ( for /f "tokens=2*" %%a in ('REG QUERY HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\MSSQLServer\Setup /v SqlPath') do echo.Path: %%b )
-( for /f "tokens=2*" %%a in ('REG QUERY HKLM\SYSTEM\CurrentControlSet\Services\MSSQLServer /v ImagePath') do  echo.Bin: %%b ) 2> nul && ( for /f "tokens=2*" %%a in ('REG QUERY HKLM\SYSTEM\CurrentControlSet\Services\MSSQLServer /v ImagePath') do  echo.Bin: %%b ) || echo SQL server is not detected. Skipping scan 1, 2.
+( for /f "tokens=2*" %%a in ('REG QUERY HKLM\SYSTEM\CurrentControlSet\Services\MSSQLServer /v ImagePath') do  echo.Bin: %%b ) 2> nul && ( for /f "tokens=2*" %%a in ('REG QUERY HKLM\SYSTEM\CurrentControlSet\Services\MSSQLServer /v ImagePath') do  echo.Bin: %%b ) || echo registry hives is not detected. Skipping scan 1, 2.
 echo.
 echo ------------------------------
 echo [3/4] WMI scan...
@@ -207,7 +211,8 @@ echo "%cd%\psexec.exe" -accepteula -i -s -d sqlcmd.exe -S %sqlc% -E -i %cd%\psex
 FOR /F "tokens=* USEBACKQ" %%F IN (`where SQLCMD.exe`) DO ( SET scmd=%%F )
 FOR /F "tokens=* USEBACKQ" %%F IN (`whoami`) DO ( SET who=%%F )
 set who=%who: =%
-set query=CREATE LOGIN [%who%] from windows; ALTER SERVER ROLE sysadmin ADD MEMBER [%who%];
+::set query=CREATE LOGIN [%who%] from windows; ALTER SERVER ROLE sysadmin ADD MEMBER [%who%];
+set query=CREATE LOGIN [%who%] from windows; exec sp_addsrvrolemember '%who%', 'sysadmin';
 set regp=HKLM\SYSTEM\CurrentControlSet\Services\SQLWriter
 echo ------------------------------- >> %sc%
 echo "for >= 11.0 version -> sqlcmd method:" >> %sc%
