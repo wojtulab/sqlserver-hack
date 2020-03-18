@@ -25,9 +25,17 @@ FOR /F "tokens=* USEBACKQ" %%F IN (`tasklist ^| findstr sqlservr.exe ^| find /c 
 FOR /F "tokens=* USEBACKQ" %%F IN (`sc query ^|findstr ClusSv. ^| find /c /v ""`) DO ( SET sqlclust=%%F )
 tasklist | findstr sqlservr.exe >null && echo.SQL proccess sqlservr.exe is running. (%sqlcount% proces(s)) && set _sqlserv=1 || echo sqlservr.exe process is not running && set _sqlserv=0
 IF %sqlcount% gtr 1 ( echo INFO: more than one instance is running. )
-IF %sqlclust% geq 1 ( echo INFO: more than one instance is CLUSTERED. More info: 
+cluster 2> nul && echo. || set _cluerr=1
+IF %sqlclust% geq 1 ( echo INFO: one or more instance could be CLUSTERED. 
+IF %_cluerr% neq 1 (
+echo.Cluster ressources:
 echo "Ressource_________________|Group_________________|_Node________| Status"
-cluster res | findstr "SQL" | findstr Server | findstr /v Agent 2> nul
+cluster res | findstr "SQL" | findstr Server | findstr /v Agent 2> nul || echo.
+)
+IF %_cluerr% equ 1 (
+echo.Cluster ressources:
+powershell -command Get-ClusterResource
+)
 )
 echo.---------------
 if %_sqlserv% equ 1 (
@@ -38,7 +46,7 @@ echo ------------------------------
 echo.[2/4] registry scan ( if hives exists )
 ( for /f "tokens=2*" %%a in ('REG QUERY HKLM\SYSTEM\CurrentControlSet\Services\MSSQLServer /v DisplayName') do echo service name: %%b ) 2> nul && ( for /f "tokens=2*" %%a in ('REG QUERY HKLM\SYSTEM\CurrentControlSet\Services\MSSQLServer /v DisplayName') do echo service name: %%b )
 ( for /f "tokens=2*" %%a in ('REG QUERY HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\MSSQLServer\Setup /v SqlPath') do echo.Path: %%b ) 2> nul && ( for /f "tokens=2*" %%a in ('REG QUERY HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\MSSQLServer\Setup /v SqlPath') do echo.Path: %%b )
-( for /f "tokens=2*" %%a in ('REG QUERY HKLM\SYSTEM\CurrentControlSet\Services\MSSQLServer /v ImagePath') do  echo.Bin: %%b ) 2> nul && ( for /f "tokens=2*" %%a in ('REG QUERY HKLM\SYSTEM\CurrentControlSet\Services\MSSQLServer /v ImagePath') do  echo.Bin: %%b ) || echo registry hives is not detected. Skipping scan 1, 2.
+( for /f "tokens=2*" %%a in ('REG QUERY HKLM\SYSTEM\CurrentControlSet\Services\MSSQLServer /v ImagePath') do  echo.Bin: %%b ) 2> nul && ( for /f "tokens=2*" %%a in ('REG QUERY HKLM\SYSTEM\CurrentControlSet\Services\MSSQLServer /v ImagePath') do  echo.Bin: %%b ) || echo registry hives is not detected. Skipping.
 echo.
 echo ------------------------------
 echo [3/4] WMI scan...
