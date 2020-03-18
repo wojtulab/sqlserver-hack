@@ -1,7 +1,7 @@
 @ECHO OFF
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::: 				   WK				                :::
-::: 	Last update: 2020-03-13     v1.1                :::
+::: 	Last update: 2020-03-18     v1.1                :::
 :::                                                     :::
 ::: please contact: kucyk87@gmail.com         			:::
 :::                        WK                           :::
@@ -25,7 +25,10 @@ FOR /F "tokens=* USEBACKQ" %%F IN (`tasklist ^| findstr sqlservr.exe ^| find /c 
 FOR /F "tokens=* USEBACKQ" %%F IN (`sc query ^|findstr ClusSv. ^| find /c /v ""`) DO ( SET sqlclust=%%F )
 tasklist | findstr sqlservr.exe >null && echo.SQL proccess sqlservr.exe is running. (%sqlcount% proces(s)) && set _sqlserv=1 || echo sqlservr.exe process is not running && set _sqlserv=0
 IF %sqlcount% gtr 1 ( echo INFO: more than one instance is running. )
-IF %sqlclust% geq 1 ( echo INFO: more than one instance is CLUSTERED.)
+IF %sqlclust% geq 1 ( echo INFO: more than one instance is CLUSTERED. More info: 
+echo "Ressource_________________|Group_________________|_Node________| Status"
+cluster res | findstr "SQL" | findstr Server | findstr /v Agent 2> nul
+)
 echo.---------------
 if %_sqlserv% equ 1 (
 echo.
@@ -39,7 +42,7 @@ echo.[2/4] registry scan ( if hives exists )
 echo.
 echo ------------------------------
 echo [3/4] WMI scan...
-call cscript /Nologo discovery.vbs 2> null || echo SQL server is not detected. Skipping
+call cscript /Nologo discovery.vbs 2> nul || echo SQL server is not detected. Skipping
 echo ------------------------------
 echo.[4/4]SQLserver scan ports:
 for /f "tokens=2*" %%a in ('tasklist /svc ^| findstr sqlser') do ( netstat -ano | findstr %%a | findstr LIST. )
@@ -79,7 +82,7 @@ goto Menu
 exit
 
 :fullwmi
-call cscript /Nologo discovery.vbs 2> null || echo SQL server is not detected. Skipping
+call cscript /Nologo discovery.vbs 2> nul || echo SQL server is not detected. Skipping
 set /p versionwmi=SQL version (major):
 IF [%versionwmi%] == [] echo.empty version, skipping && goto Menu
 call cscript /Nologo discover_full.vbs %versionwmi%
