@@ -11,7 +11,7 @@ Just copy all files to any directory
 Open START file then it will open with admin rights hack.bat script.
 
 # KNOWN BUGS
-+ Clusters discovery (listing details)
++ Clusters discovery (listing more details)
 
 # EXAMPLE
 Genereted fullscript.txt file content:
@@ -50,3 +50,4 @@ sqlcmd.exe -S SQL2019s.contoso.com -h -1 -E -i C:\WK_Scripts\_Projects\LostPassw
 + scan for protocols: tcp, name pipe and local
 + counting process 
 + debug info regarding sql clustering
++ cluster mssql discovery
