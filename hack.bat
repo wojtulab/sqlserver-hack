@@ -23,25 +23,30 @@ echo ------------------------------
 sc query |findstr .SQLB. >nul && Echo.SQLBrowser is running. && set _browser=1 || Echo.SQLBrowser is disabled. && set _browser=0
 FOR /F "tokens=* USEBACKQ" %%F IN (`tasklist ^| findstr sqlservr.exe ^| find /c /v ""`) DO ( SET sqlcount=%%F )
 FOR /F "tokens=* USEBACKQ" %%F IN (`sc query ^|findstr ClusSv. ^| find /c /v ""`) DO ( SET sqlclust=%%F )
-tasklist | findstr sqlservr.exe >null && echo.SQL proccess sqlservr.exe is running. (%sqlcount% proces(s)) && set _sqlserv=1 || echo sqlservr.exe process is not running && set _sqlserv=0
+tasklist | findstr sqlservr.exe >nul && echo.SQL proccess sqlservr.exe is running. (%sqlcount% proces(s)) && set _sqlserv=1 || echo sqlservr.exe process is not running && set _sqlserv=0
 IF %sqlcount% gtr 1 ( echo INFO: more than one instance is running. )
-cluster 2> nul && echo. || set _cluerr=1
-IF %sqlclust% geq 1 ( echo INFO: one or more instance could be CLUSTERED. 
+cluster group >nul && set _cluerr=0 || set _cluerr=1
+IF %sqlclust% geq 1 ( echo.INFO: one or more instance could be CLUSTERED. 
+)
 IF %_cluerr% neq 1 (
-echo.Cluster ressources:
-echo "Ressource_________________|Group_________________|_Node________| Status"
-cluster res | findstr "SQL" | findstr Server | findstr /v Agent 2> nul || echo.
+echo.Founded SQL server clusterd instances:
+for /f "tokens=4 delims= " %%a in ('cluster res ^| findstr "SQL" ^| findstr Server ^| findstr /v Agent') do ( 
+call sqlcmd -r1 -Q"" -S tcp:%%a\%%a -l 1 2>nul && echo %%a\%%a
 )
 IF %_cluerr% equ 1 (
 echo.Cluster ressources:
-powershell -command Get-ClusterResource
+call powershell -command Get-ClusterResource 2> nul
 )
 )
 echo.---------------
 if %_sqlserv% equ 1 (
 echo.
 echo.[1/4] Running SQL Services scan: && sc query | findstr /R [a-z]*MSSQLSERVER | findstr SERVICE | findstr /V Launcher >nul && ( sc query | findstr /R [a-z]*MSSQLSERVER | findstr SERVICE | findstr /V Launcher )
+call sqlcmd -r1 -Q"" -S tcp:%COMPUTERNAME% -l 1 2>nul && echo %COMPUTERNAME%
 sc query | findstr .MSSQL$. | findstr SERVICE | findstr /V Launcher >nul && ( sc query | findstr .MSSQL$. | findstr SERVICE | findstr /V Launcher )
+for /f "tokens=2 delims=$" %%a in ('sc query ^| findstr .MSSQL$. ^| findstr SERVICE ^| findstr /V Launcher ') do ( 
+call sqlcmd -r1 -Q"" -S tcp:%COMPUTERNAME%\%%a -l 1 2>nul && echo %%a\%%a
+)
 echo ------------------------------
 echo.[2/4] registry scan ( if hives exists )
 ( for /f "tokens=2*" %%a in ('REG QUERY HKLM\SYSTEM\CurrentControlSet\Services\MSSQLServer /v DisplayName') do echo service name: %%b ) 2> nul && ( for /f "tokens=2*" %%a in ('REG QUERY HKLM\SYSTEM\CurrentControlSet\Services\MSSQLServer /v DisplayName') do echo service name: %%b )
@@ -76,14 +81,14 @@ goto %goto%
 
 :Protocols
 set /p sqlt=please type connection string/instance name:
-echo sqlcmd -S np:%sqlt%
-( call sqlcmd -h -1 -S %sqlt% -Q "set nocount on; print 'connected';" 2>nul ) && echo.tcp is ok || echo.tcp not ok
+echo sqlcmd -S tcp:%sqlt% (tcp connection)
+( call sqlcmd -r1 -l 1 -h -1 -S tcp:sqlcmd -S tcp:%sqlt% -Q"" 2>nul ) && echo.ok || echo.KO
 echo --
-echo sqlcmd -S np:%sqlt%
-( call sqlcmd -h -1 -S np:%sqlt% -Q "set nocount on; print 'connected';" 2>nul ) && echo.Name Pipe is ok || echo.Name Pipe not ok
+echo sqlcmd -S np:%sqlt% (name pipe connection)
+( call sqlcmd -r1 -l 1 -h -1 -S np:%sqlt% -Q"" 2>nul ) && echo.ok || echo.KO
 echo --
-echo sqlcmd -S lpc:%sqlt%
-( call sqlcmd -h -1 -S lpc:%sqlt% -Q "set nocount on; print 'connected';" 2>nul ) && echo.Local protocol is ok || echo.Local protocol not ok
+echo sqlcmd -S lpc:%sqlt% (local connection)
+( call sqlcmd -r1 -l 1 -h -1 -S lpc:%sqlt% -Q"" 2>nul ) && echo.ok || echo.KO
 goto Menu
 
 :quit
