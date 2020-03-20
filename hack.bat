@@ -9,6 +9,9 @@
 cd %cd%
 IF "%cd%"=="C:\WINDOWS\system32" echo wrong path, run this script from cmd.exe as admin (just open cmd and call this script) & goto exitting
 set host=%COMPUTERNAME%
+set _browser=1
+set sc=fullscript.txt
+set tst=test-if-iam-sysadmin.bat
 set sfound="mssql_founded.txt"
 echo. > %sfound%
 ::echo is current path correct?
@@ -40,35 +43,35 @@ FOR /F "tokens=* USEBACKQ" %%F IN (`tasklist ^| findstr sqlservr.exe ^| find /c 
 FOR /F "tokens=* USEBACKQ" %%F IN (`sc query ^|findstr ClusSv. ^| find /c /v ""`) DO ( SET sqlclust=%%F )
 tasklist | findstr sqlservr.exe >nul && echo.SQL proccess sqlservr.exe is running. (%sqlcount% proces(s)) && set _sqlserv=1 || echo sqlservr.exe process is not running && set _sqlserv=0
 ::IF %sqlcount% gtr 1 ( echo INFO: more than one instance is running. )
-cluster group >nul && set _cluerr=0 || set _cluerr=1
+::call sqlcmd -r1 -Q"" -S tcp:%%a\%%a -l 1 2>nul && echo %%a\%%a
+::echo %%a\%%a && call sqlcmd -r1 -Q"" -S tcp:%%a\%%a -l 1 2>nul && echo %%a\%%a
+cluster group 2>nul && set _cluerr=0 || set _cluerr=1
 IF %sqlclust% geq 1 ( 
 echo.-------------------------
 echo.INFO: one or more instance could be CLUSTERED. 
-)
-::call sqlcmd -r1 -Q"" -S tcp:%%a\%%a -l 1 2>nul && echo %%a\%%a
-::echo %%a\%%a && call sqlcmd -r1 -Q"" -S tcp:%%a\%%a -l 1 2>nul && echo %%a\%%a
 IF %_cluerr% neq 1 (
 echo.Founded SQL server clusterd instances:
 for /f "tokens=4 delims= " %%a in ('cluster res ^| findstr "SQL" ^| findstr Server ^| findstr /v Agent') do (
 echo %%a\%%a >> %sfound% 
 call sqlcmd -l1 -Q"print'connected successfully:';" -S tcp:%%a\%%a 2>&1 |findstr /c:"connected" /c:"Login failed" && echo %%a\%%a
 )
+)
 IF %_cluerr% equ 1 (
 echo.Cluster ressources:
-call powershell -command Get-ClusterResource 2> nul
+call powershell -command "Get-ClusterResource | where { $_.ResourceType -like '*sql*' }" 2> nul
 )
 )
 echo.---------------
 if %_sqlserv% equ 1 (
 echo.
 echo.[1/4] Running SQL Services scan: && sc query | findstr /R [a-z]*MSSQLSERVER | findstr SERVICE | findstr /V Launcher >nul && ( sc query | findstr /R [a-z]*MSSQLSERVER | findstr SERVICE | findstr /V Launcher )
-call sqlcmd -l1 -Q"print'connected ok';" -S tcp:%COMPUTERNAME% 2>&1 |findstr /c:"connected" /c:"Login failed" && echo %COMPUTERNAME% && echo %COMPUTERNAME% >> %sfound% 
+call sqlcmd -l1 -Q"print'connected successfully:';" -S tcp:%COMPUTERNAME% 2>&1 |findstr /c:"connected" /c:"Login failed" && echo %COMPUTERNAME% && echo %COMPUTERNAME% >> %sfound% 
 sc query | findstr .MSSQL$. | findstr SERVICE | findstr /V Launcher >nul && ( sc query | findstr .MSSQL$. | findstr SERVICE | findstr /V Launcher )
 for /f "tokens=2 delims=$" %%a in ('sc query ^| findstr .MSSQL$. ^| findstr SERVICE ^| findstr /V Launcher ') do ( 
-call sqlcmd -l1 -Q"print'connected ok';" -S tcp:%COMPUTERNAME%\%%a 2>&1 |findstr /c:"connected" /c:"Login failed" && echo %COMPUTERNAME%\%%a && echo %COMPUTERNAME%\%%a >> %sfound% 
+call sqlcmd -l1 -Q"print'connected successfully:';" -S tcp:%COMPUTERNAME%\%%a 2>&1 |findstr /c:"connected" /c:"Login failed" && echo %COMPUTERNAME%\%%a && echo %COMPUTERNAME%\%%a >> %sfound% 
 )
 echo ------------------------------
-echo.[2/4] registry scan ( if hives exists )
+echo.[2/4] registry scan [if hives exists]
 ( for /f "tokens=2*" %%a in ('REG QUERY HKLM\SYSTEM\CurrentControlSet\Services\MSSQLServer /v DisplayName') do echo service name: %%b ) 2> nul && ( for /f "tokens=2*" %%a in ('REG QUERY HKLM\SYSTEM\CurrentControlSet\Services\MSSQLServer /v DisplayName') do echo service name: %%b )
 ( for /f "tokens=2*" %%a in ('REG QUERY HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\MSSQLServer\Setup /v SqlPath') do echo.Path: %%b ) 2> nul && ( for /f "tokens=2*" %%a in ('REG QUERY HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\MSSQLServer\Setup /v SqlPath') do echo.Path: %%b )
 ( for /f "tokens=2*" %%a in ('REG QUERY HKLM\SYSTEM\CurrentControlSet\Services\MSSQLServer /v ImagePath') do  echo.Bin: %%b ) 2> nul && ( for /f "tokens=2*" %%a in ('REG QUERY HKLM\SYSTEM\CurrentControlSet\Services\MSSQLServer /v ImagePath') do  echo.Bin: %%b ) || echo registry hives is not detected. Skipping.
@@ -237,15 +240,13 @@ if %_browser% equ 1 (
 echo ----------------REMEMBER to use: -------------------------
 echo.
 echo current version:
-call PortQry.exe -n localhost -p udp -o 1434 | findstr "Version"
+call PortQry.exe -n localhost -p udp -o 1434 2>nul | findstr "Version"
 echo.
 echo "<= 10.5 version -> using psexec method from generated script"
 echo ">= 11.0 version -> using writer method from generated script"
 echo.
 echo ----------------REMEMBER ----------------------------------
 ) 
-set sc=fullscript.txt
-set tst=test-if-iam-sysadmin.bat
 echo "for <= 10.5 version -> use PSEXEC method:" >> %sc%
 echo "%cd%\psexec.exe" -accepteula -i -s -d sqlcmd.exe -S %sqlc% -E -i %cd%\psexec.sql >> %sc%
 FOR /F "tokens=* USEBACKQ" %%F IN (`where SQLCMD.exe`) DO ( SET scmd=%%F )
