@@ -1,7 +1,7 @@
 @ECHO OFF
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::: 				   WK				                :::
-::: 	Last update: 2020-03-18     v1.1                :::
+::: 	Last update: 2020-03-20     v1.1                :::
 :::                                                     :::
 ::: please contact: kucyk87@gmail.com         			:::
 :::                        WK                           :::
@@ -9,29 +9,49 @@
 cd %cd%
 IF "%cd%"=="C:\WINDOWS\system32" echo wrong path, run this script from cmd.exe as admin (just open cmd and call this script) & goto exitting
 set host=%COMPUTERNAME%
-echo is current path correct?
-echo %cd%
-echo.
-echo and running with admin rights? (ctrl+c to cancel)
-PAUSE
-cls
+set sfound="mssql_founded.txt"
+echo. > %sfound%
+::echo is current path correct?
+::echo %cd%
+::echo.
+::echo and running with admin rights? (ctrl+c to cancel)
+::PAUSE
+::cls
 echo.
 echo ------------------------------
 echo current hostname: %COMPUTERNAME%
+for /f "tokens=1-2*" %%A in ('net statistics workstation ^| find "Statistics since"') do echo uptime: %%C
 echo ------------------------------
+:Starting
+echo.1) generate scripts
+echo.2) continue discovery SQLservices
+set menu=
+choice /c 123 /n /m "Choose a task"
+set menu=%errorlevel%
+if errorlevel 1 set goto=fullscript
+if errorlevel 2 set goto=Scan
+if errorlevel 3 set goto=quit
+cls
+goto %goto%
+
 :Scan
 sc query |findstr .SQLB. >nul && Echo.SQLBrowser is running. && set _browser=1 || Echo.SQLBrowser is disabled. && set _browser=0
 FOR /F "tokens=* USEBACKQ" %%F IN (`tasklist ^| findstr sqlservr.exe ^| find /c /v ""`) DO ( SET sqlcount=%%F )
 FOR /F "tokens=* USEBACKQ" %%F IN (`sc query ^|findstr ClusSv. ^| find /c /v ""`) DO ( SET sqlclust=%%F )
 tasklist | findstr sqlservr.exe >nul && echo.SQL proccess sqlservr.exe is running. (%sqlcount% proces(s)) && set _sqlserv=1 || echo sqlservr.exe process is not running && set _sqlserv=0
-IF %sqlcount% gtr 1 ( echo INFO: more than one instance is running. )
+::IF %sqlcount% gtr 1 ( echo INFO: more than one instance is running. )
 cluster group >nul && set _cluerr=0 || set _cluerr=1
-IF %sqlclust% geq 1 ( echo.INFO: one or more instance could be CLUSTERED. 
+IF %sqlclust% geq 1 ( 
+echo.-------------------------
+echo.INFO: one or more instance could be CLUSTERED. 
 )
+::call sqlcmd -r1 -Q"" -S tcp:%%a\%%a -l 1 2>nul && echo %%a\%%a
+::echo %%a\%%a && call sqlcmd -r1 -Q"" -S tcp:%%a\%%a -l 1 2>nul && echo %%a\%%a
 IF %_cluerr% neq 1 (
 echo.Founded SQL server clusterd instances:
-for /f "tokens=4 delims= " %%a in ('cluster res ^| findstr "SQL" ^| findstr Server ^| findstr /v Agent') do ( 
-call sqlcmd -r1 -Q"" -S tcp:%%a\%%a -l 1 2>nul && echo %%a\%%a
+for /f "tokens=4 delims= " %%a in ('cluster res ^| findstr "SQL" ^| findstr Server ^| findstr /v Agent') do (
+echo %%a\%%a >> %sfound% 
+call sqlcmd -l1 -Q"print'connected successfully:';" -S tcp:%%a\%%a 2>&1 |findstr /c:"connected" /c:"Login failed" && echo %%a\%%a
 )
 IF %_cluerr% equ 1 (
 echo.Cluster ressources:
@@ -42,10 +62,10 @@ echo.---------------
 if %_sqlserv% equ 1 (
 echo.
 echo.[1/4] Running SQL Services scan: && sc query | findstr /R [a-z]*MSSQLSERVER | findstr SERVICE | findstr /V Launcher >nul && ( sc query | findstr /R [a-z]*MSSQLSERVER | findstr SERVICE | findstr /V Launcher )
-call sqlcmd -r1 -Q"" -S tcp:%COMPUTERNAME% -l 1 2>nul && echo %COMPUTERNAME%
+call sqlcmd -l1 -Q"print'connected ok';" -S tcp:%COMPUTERNAME% 2>&1 |findstr /c:"connected" /c:"Login failed" && echo %COMPUTERNAME% && echo %COMPUTERNAME% >> %sfound% 
 sc query | findstr .MSSQL$. | findstr SERVICE | findstr /V Launcher >nul && ( sc query | findstr .MSSQL$. | findstr SERVICE | findstr /V Launcher )
 for /f "tokens=2 delims=$" %%a in ('sc query ^| findstr .MSSQL$. ^| findstr SERVICE ^| findstr /V Launcher ') do ( 
-call sqlcmd -r1 -Q"" -S tcp:%COMPUTERNAME%\%%a -l 1 2>nul && echo %%a\%%a
+call sqlcmd -l1 -Q"print'connected ok';" -S tcp:%COMPUTERNAME%\%%a 2>&1 |findstr /c:"connected" /c:"Login failed" && echo %COMPUTERNAME%\%%a && echo %COMPUTERNAME%\%%a >> %sfound% 
 )
 echo ------------------------------
 echo.[2/4] registry scan ( if hives exists )
@@ -169,12 +189,16 @@ setlocal enabledelayedexpansion
 
 :ChooseSQL
 echo.
-echo.Protocols check:
-echo sqlcmd -S np:%sqlc%
-( call sqlcmd -h -1 -S np:%sqlc% -Q "set nocount on; print 'connected';" 2>nul ) && echo.Name Pipe is ok || echo.Name Pipe not ok
-echo --
-echo sqlcmd -S lpc:%sqlc%
-( call sqlcmd -h -1 -S lpc:%sqlc% -Q "set nocount on; print 'connected';" 2>nul ) && echo.Local protocol is ok || echo.Local protocol not ok
+::echo.Protocols check:
+::echo sqlcmd -S np:%sqlc%
+::( call sqlcmd -h -1 -S np:%sqlc% -Q "set nocount on; print 'connected';" 2>nul ) && echo.Name Pipe is ok || echo.Name Pipe not ok
+::echo --
+::echo sqlcmd -S lpc:%sqlc%
+::( call sqlcmd -h -1 -S lpc:%sqlc% -Q "set nocount on; print 'connected';" 2>nul ) && echo.Local protocol is ok || echo.Local protocol not ok
+::echo.
+echo.
+echo. Founded MsSQL in discovery:
+type %sfound%
 echo.
 echo.1) use default: %COMPUTERNAME%
 echo.2) use named sql: %sqlc%
@@ -191,7 +215,7 @@ goto %goto%
 :browser
 cls
 echo scanning Microsoft SQLBROWSER for sql services...
-if %_browser% equ 1 (call PortQry.exe -n localhost -p udp -o 1434 | findstr "ServerName InstanceName tcp Version") ELSE (echo.SQLBrowser is disabled. Starting... && ( net start SQLBrowser 2> nul && call PortQry.exe -n localhost -p udp -o 1434 ) )
+if %_browser% equ 1 (call PortQry.exe -n localhost -p udp -o 1434 | findstr "ServerName InstanceName tcp Version IsClustered") ELSE (echo.SQLBrowser is disabled. Starting... && ( net start SQLBrowser 2> nul && call PortQry.exe -n localhost -p udp -o 1434 ) )
 goto Menu
 
 :Specified
