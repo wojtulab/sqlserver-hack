@@ -9,7 +9,10 @@
 cd %cd%
 IF "%cd%"=="C:\WINDOWS\system32" echo wrong path, run this script from cmd.exe as admin (just open cmd and call this script) & goto exitting
 set host=%COMPUTERNAME%
-set _browser=1
+fc "user.txt" "blank.txt" > nul && ( FOR /F "tokens=* USEBACKQ" %%F IN (`whoami`) DO ( SET who=%%F ) ) || ( set /p who=<user.txt )
+set who=%who: =%
+echo.account %who% will be used (specify windows user inside user.txt or leave empty to use default)
+sc query |findstr .SQLB. >nul && Echo.SQLBrowser is running. && set _browser=1 || Echo.SQLBrowser is disabled. && set _browser=0
 set sc=fullscript.txt
 set tst=test-if-iam-sysadmin.bat
 set sfound="mssql_founded.txt"
@@ -38,7 +41,6 @@ cls
 goto %goto%
 
 :Scan
-sc query |findstr .SQLB. >nul && Echo.SQLBrowser is running. && set _browser=1 || Echo.SQLBrowser is disabled. && set _browser=0
 FOR /F "tokens=* USEBACKQ" %%F IN (`tasklist ^| findstr sqlservr.exe ^| find /c /v ""`) DO ( SET sqlcount=%%F )
 FOR /F "tokens=* USEBACKQ" %%F IN (`sc query ^|findstr ClusSv. ^| find /c /v ""`) DO ( SET sqlclust=%%F )
 tasklist | findstr sqlservr.exe >nul && echo.SQL proccess sqlservr.exe is running. (%sqlcount% proces(s)) && set _sqlserv=1 || echo sqlservr.exe process is not running && set _sqlserv=0
@@ -163,7 +165,7 @@ setlocal enabledelayedexpansion
 	SET snamed=%snamed:MSSQL$=\ %
 	SET snamed=%snamed:SERVICE_NAME:= %
 	set snamed=%snamed: =%
-	echo %COMPUTERNAME%%snamed%
+	call sqlcmd -l1 -Q"print'connected successfully:';" -S tcp:%COMPUTERNAME%%snamed% 2>&1 |findstr /c:"connected" /c:"Login failed" && echo %COMPUTERNAME%%snamed%
 	set /a "i+=1"
 	if %i% neq %len% goto:loop2
 	:wyniknam
@@ -203,6 +205,15 @@ echo.
 echo. Founded MsSQL in discovery:
 type %sfound%
 echo.
+echo checking connection to founded SQL instances:
+for /F "usebackq tokens=*" %%A in (%sfound%) do (
+echo %%A connecting...
+call sqlcmd -l1 -Q"print'connected successfully:';" -S tcp:%%A 2>&1 |findstr /c:"connected" /c:"Login failed"
+)
+echo.
+echo ------------------------------
+echo.account %who% will be used
+echo ------------------------------
 echo.1) use default: %COMPUTERNAME%
 echo.2) use named sql: %sqlc%
 echo.3) use another instance...
@@ -250,8 +261,6 @@ echo ----------------REMEMBER ----------------------------------
 echo "for <= 10.5 version -> use PSEXEC method:" >> %sc%
 echo "%cd%\psexec.exe" -accepteula -i -s -d sqlcmd.exe -S %sqlc% -E -i %cd%\psexec.sql >> %sc%
 FOR /F "tokens=* USEBACKQ" %%F IN (`where SQLCMD.exe`) DO ( SET scmd=%%F )
-FOR /F "tokens=* USEBACKQ" %%F IN (`whoami`) DO ( SET who=%%F )
-set who=%who: =%
 ::set query=CREATE LOGIN [%who%] from windows; ALTER SERVER ROLE sysadmin ADD MEMBER [%who%];
 set query=CREATE LOGIN [%who%] from windows; exec sp_addsrvrolemember '%who%', 'sysadmin';
 set regp=HKLM\SYSTEM\CurrentControlSet\Services\SQLWriter
