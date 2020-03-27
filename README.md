@@ -51,3 +51,4 @@ sqlcmd.exe -S SQL2019s.contoso.com -h -1 -E -i C:\WK_Scripts\_Projects\LostPassw
 + counting process 
 + debug info regarding sql clustering
 + cluster mssql discovery
++ AlwaysOn discovery
