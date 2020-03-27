@@ -33,14 +33,25 @@ echo --------------------------------------------
 :Starting
 echo.1) generate scripts
 echo.2) continue discovery SQLservices
+echo.3) scan network for SQLservices
 set menu=
-choice /c 123 /n /m "Choose a task"
+choice /c 1234 /n /m "Choose a task"
 set menu=%errorlevel%
 if errorlevel 1 set goto=fullscript
 if errorlevel 2 set goto=Scan
-if errorlevel 3 set goto=quit
+if errorlevel 3 set goto=Network
+if errorlevel 4 set goto=quit
 cls
 goto %goto%
+
+:Network
+echo scan using OSQL
+call OSQL -L
+echo scan using powershell SqlDataSourceEnumerator:
+call powershell -command "[System.Data.Sql.SqlDataSourceEnumerator]::Instance.GetDataSources()" 2> nul
+echo any key to menu
+pause
+goto Starting
 
 :Scan
 FOR /F "tokens=* USEBACKQ" %%F IN (`tasklist ^| findstr sqlservr.exe ^| find /c /v ""`) DO ( SET sqlcount=%%F )
