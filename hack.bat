@@ -9,9 +9,10 @@
 cd %cd%
 IF "%cd%"=="C:\WINDOWS\system32" echo wrong path, run this script from cmd.exe as admin (just open cmd and call this script) & goto exitting
 set host=%COMPUTERNAME%
+set domain=%USERDOMAIN%
 fc "user.txt" "blank.txt" > nul && ( FOR /F "tokens=* USEBACKQ" %%F IN (`whoami`) DO ( SET who=%%F ) ) || ( set /p who=<user.txt )
 set who=%who: =%
-echo.account %who% will be used (specify windows user inside user.txt or leave empty to use default)
+echo.account %who% will be used (specify user inside user.txt)
 sc query |findstr .SQLB. >nul && Echo.SQLBrowser is running. && set _browser=1 || Echo.SQLBrowser is disabled. && set _browser=0
 set sc=fullscript.txt
 set tst=test-if-iam-sysadmin.bat
@@ -24,10 +25,11 @@ echo. > %sfound%
 ::PAUSE
 ::cls
 echo.
-echo ------------------------------
+echo --------------------------------------------
+echo domain: %domain%
 echo current hostname: %COMPUTERNAME%
 for /f "tokens=1-2*" %%A in ('net statistics workstation ^| find "Statistics since"') do echo uptime: %%C
-echo ------------------------------
+echo --------------------------------------------
 :Starting
 echo.1) generate scripts
 echo.2) continue discovery SQLservices
@@ -61,6 +63,7 @@ call sqlcmd -l1 -Q"print'connected successfully:';" -S tcp:%%a\%%a 2>&1 |findstr
 IF %_cluerr% equ 1 (
 echo.Cluster ressources:
 call powershell -command "Get-ClusterResource | where { $_.ResourceType -like '*sql*' }" 2> nul
+call powershell -command "if ($($(Get-ClusterResource | where { $_.ResourceType -like '*sql*' }).ResourceType).Name -like '*Availability*' ) { write-host 'INFO: AlwaysOn detected' }" 2> nul
 )
 )
 echo.---------------
@@ -217,13 +220,18 @@ echo ------------------------------
 echo.1) use default: %COMPUTERNAME%
 echo.2) use named sql: %sqlc%
 echo.3) use another instance...
+echo.4) use all instances from discovery
 
 set menu=
-choice /c 123 /n /m "Choose a task"
+choice /c 1234 /n /m "Choose a task"
+set many=0
 set menu=%errorlevel%
 if errorlevel 1 set goto=Nextstuff1
 if errorlevel 2 set goto=Nextstuff2
 if errorlevel 3 set goto=Specified
+if errorlevel 4 ( set goto=Nextstuff 
+set many=1 
+)
 goto %goto%
 
 :browser
@@ -257,23 +265,36 @@ echo "<= 10.5 version -> using psexec method from generated script"
 echo ">= 11.0 version -> using writer method from generated script"
 echo.
 echo ----------------REMEMBER ----------------------------------
-) 
-echo "for <= 10.5 version -> use PSEXEC method:" >> %sc%
+)
+echo "for <= 10.5 version -> use PSEXEC method:" > %sc%
+IF %many% equ 1 (
+for /F "usebackq tokens=*" %%A in (%sfound%) do (
+echo "%cd%\psexec.exe" -accepteula -i -s -d sqlcmd.exe -S %%A -E -i %cd%\psexec.sql >> %sc%)
+) else (
 echo "%cd%\psexec.exe" -accepteula -i -s -d sqlcmd.exe -S %sqlc% -E -i %cd%\psexec.sql >> %sc%
+)
 FOR /F "tokens=* USEBACKQ" %%F IN (`where SQLCMD.exe`) DO ( SET scmd=%%F )
 ::set query=CREATE LOGIN [%who%] from windows; ALTER SERVER ROLE sysadmin ADD MEMBER [%who%];
 set query=CREATE LOGIN [%who%] from windows; exec sp_addsrvrolemember '%who%', 'sysadmin';
 set regp=HKLM\SYSTEM\CurrentControlSet\Services\SQLWriter
 echo ------------------------------- >> %sc%
 echo "for >= 11.0 version -> sqlcmd method:" >> %sc%
+echo ----REG BACKUP: >> %sc%
 echo REG EXPORT %regp% C:\temp\sql.reg /y >> %sc%
 echo ----START >> %sc%
+IF %many% equ 1 (
+for /F "usebackq tokens=*" %%A in (%sfound%) do (
+echo reg add %regp% /v ImagePath /d """"%scmd%""" -S %%A -E -Q """%query%"" /f >> %sc%
+echo net stop SQLWriter >> %sc%
+echo net start SQLWriter >> %sc% )
+) else (
 echo reg add %regp% /v ImagePath /d """"%scmd%""" -S %sqlc% -E -Q """%query%"" /f >> %sc%
 echo net stop SQLWriter >> %sc%
 echo net start SQLWriter >> %sc%
+)
 echo reg add %regp% /v ImagePath /d "C:\Program Files\Microsoft SQL Server\90\Shared\sqlwriter.exe" /f >> %sc%
 echo net start SQLWriter >> %sc%
-echo ----STOP >> %sc%
+echo ----REG RESTORE: >> %sc%
 echo REG IMPORT C:\temp\sql.reg >> %sc%
 echo %query% > %cd%\psexec.sql
 echo ----TEST: >> %sc%
