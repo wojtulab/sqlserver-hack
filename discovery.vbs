@@ -41,7 +41,7 @@ If Err.Number <> 0 Then
 			strPATH = objProp.PropertyStrValue
         End If
     Next
-		
+
 
     ' We do not want the number of bits, so chop it off!
     If Instr(strSKUName, " (") <> 0 Then
@@ -52,7 +52,8 @@ If Err.Number <> 0 Then
         strArchitecture = "32-bit"
     End If
 
-	WScript.Echo "---=== MAJOR VERSION ===--- : " & Left(strVersion, 2)
+	' WScript.Echo "---=== MAJOR VERSION ===--- : " & Left(strVersion, 2)
+  WScript.Echo "MAJORVERSION: " & Left(strVersion, 2)
 	WScript.Echo "Version: " & strVersion
 	WScript.Echo "Path: " & strPATH
     WScript.Echo "Edition: " & strEdition & " / " & strSKUName & " / " & strArchitecture
