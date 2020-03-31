@@ -53,3 +53,4 @@ sqlcmd.exe -S SQL2019s.contoso.com -h -1 -E -i C:\WK_Scripts\_Projects\LostPassw
 + cluster mssql discovery
 + AlwaysOn discovery
 + scan network for SQLservices
++ variables moved to external file
