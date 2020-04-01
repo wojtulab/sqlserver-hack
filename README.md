@@ -41,16 +41,17 @@ sqlcmd.exe -S SQL2019s.contoso.com -h -1 -E -i C:\WK_Scripts\_Projects\LostPassw
 + scan for browser;
 + scan for sqlservr.exe;
 + scan for open ports;
-+ scan for registry entries
++ scan for registry entries;
++ scan for multiple sql instances;
 
 ++ -=version 1.1=-
 + added:
-+ scan for WMI
-+ scan for Windows Registry
-+ scan for protocols: tcp, name pipe and local
-+ counting process 
-+ debug info regarding sql clustering
-+ cluster mssql discovery
-+ AlwaysOn discovery
-+ scan network for SQLservices
-+ variables moved to external file
++ scan for WMI;
++ scan for Windows Registry;
++ scan for protocols: tcp, name pipe and local;
++ debug info regarding sql clustering;
++ cluster mssql discovery;
++ AlwaysOn discovery;
++ scan network for SQLservices;
++ variables moved to external file;
++ recovery access script saved to txt and bat formats;
