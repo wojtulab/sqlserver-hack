@@ -2,7 +2,7 @@
 Simple debug connection and recover access to MsSQL server using psexec (system account) or SQLwriter.
 
 # INFO
-Script produce txt file (fullscript.txt) with prepared commands to recover access to specified SQL server instnace.
+Script produce txt file (fullscript.txt + .bat) with prepared commands to recover access to specified SQL server instnace. You can use additional debug functions to discover SQLservices and get details: license, is clustered, is alwayson enabled, listening ports etc.
 
 # SETUP
 Just copy all files to any directory
