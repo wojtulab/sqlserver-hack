@@ -1,9 +1,9 @@
 @ECHO OFF
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-::: 				   WK				                                :::
-::: 	Last update: 2020-03-31     v1.1                  :::
+::: 				   WK				                :::
+::: 	Last update: 2020-04-01     v1.1                :::
 :::                                                     :::
-::: please contact: kucyk87@gmail.com         			    :::
+::: please contact: kucyk87@gmail.com         			:::
 :::                        WK                           :::
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 call variables.bat > nul
@@ -231,23 +231,18 @@ echo ">= 11.0 version -> using writer method from generated script"
 echo.
 echo ----------------REMEMBER ----------------------------------
 )
-echo "for <= 10.5 version -> use PSEXEC method:" > %sc%
+echo ::"for <= 10.5 version -> use PSEXEC method:" > %sc%
 if "%many%" equ 1 (
 for /F "usebackq tokens=*" %%A in (%sfound%) do (
-echo "%cd%\psexec.exe" -accepteula -i -s -d sqlcmd.exe -S %%A -E -i "%cd%\psexec.sql" >> %sc%)
+echo ::"%cd%\psexec.exe" -accepteula -i -s -d sqlcmd.exe -S %%A -E -i "%cd%\psexec.sql" >> %sc%)
 ) else (
-echo "%cd%\psexec.exe" -accepteula -i -s -d sqlcmd.exe -S %sqlc% -E -i "%cd%\psexec.sql" >> %sc%
+echo ::"%cd%\psexec.exe" -accepteula -i -s -d sqlcmd.exe -S %sqlc% -E -i "%cd%\psexec.sql" >> %sc%
 )
-::FOR /F "tokens=* USEBACKQ" %%F IN (`where SQLCMD.exe`) DO ( SET scmd=%%F )
-set scmd=SQLCMD.exe
-::set query=CREATE LOGIN [%who%] from windows; ALTER SERVER ROLE sysadmin ADD MEMBER [%who%];
-set query=CREATE LOGIN [%who%] from windows; exec sp_addsrvrolemember '%who%', 'sysadmin';
-set regp=HKLM\SYSTEM\CurrentControlSet\Services\SQLWriter
-echo ------------------------------- >> %sc%
-echo "for >= 11.0 version -> sqlcmd method:" >> %sc%
-echo ----REG BACKUP: >> %sc%
+echo ::------------------------------- >> %sc%
+echo ::"for >= 11.0 version -> sqlcmd method:" >> %sc%
+echo ::REG BACKUP: >> %sc%
 echo REG EXPORT %regp% C:\temp\sql.reg /y >> %sc%
-echo ----START >> %sc%
+echo ::START >> %sc%
 if %many% equ 1 (
 for /F "usebackq tokens=*" %%A in (%sfound%) do (
 echo reg add "%regp%" /v ImagePath /d """"%scmd%""" -S %%A -E -Q """%query%"" /f >> "%sc%"
@@ -258,19 +253,20 @@ echo reg add "%regp%" /v ImagePath /d """"%scmd%""" -S "%sqlc%" -E -Q """%query%
 echo net stop SQLWriter >> %sc%
 echo net start SQLWriter >> %sc%
 )
-echo reg add %regp% /v ImagePath /d "C:\Program Files\Microsoft SQL Server\90\Shared\sqlwriter.exe" /f >> %sc%
+echo reg add %regp% /v ImagePath /d "%writer%" /f >> %sc%
 echo net start SQLWriter >> %sc%
-echo ----REG RESTORE: >> %sc%
-echo REG IMPORT C:\temp\sql.reg >> %sc%
+echo ::REG RESTORE: >> %sc%
+echo ::REG IMPORT C:\temp\sql.reg >> %sc%
 echo %query% > %cd%\psexec.sql
-echo ----TEST: >> %sc%
-echo to test use: >> %sc%
+echo ::TEST: >> %sc%
+echo ::to test use: >> %sc%
 echo sqlcmd.exe -S %sqlc% -h -1 -E -i %cd%\chck.sql >> %sc%
 echo @echo off > %tst%
 echo cmd /k sqlcmd.exe -S %sqlc% -h -1 -E -i %cd%\chck.sql >> %tst%
 echo.
-echo done, script %sc% generated. Any key go to MENU.
+echo done, fullscript .txt and .bat generated. Any key go to MENU.
 echo. you can test after applaying script via test-if-iam-sysadmin.bat
+copy %sc% %scb% > nul
 PAUSE
 call Nircmd.exe elevate cmd.exe /s /k "mode con cols=100 lines=300 && PUSHD \"
 call notepad.exe fullscript.txt
