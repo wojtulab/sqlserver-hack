@@ -1,7 +1,7 @@
 @ECHO OFF
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::: 				   WK				                :::
-::: 	Last update: 2020-04-01     v1.1                :::
+::: 	Last update: 2020-04-02     v1.1                :::
 :::                                                     :::
 ::: please contact: kucyk87@gmail.com         			:::
 :::                        WK                           :::
@@ -18,17 +18,19 @@ echo current hostname: %COMPUTERNAME%
 for /f "tokens=1-2*" %%A in ('net statistics workstation ^| find "Statistics since"') do echo uptime: %%C
 echo --------------------------------------------
 :Starting
-echo.1) generate scripts
+echo.1) generate recovery scripts
 echo.2) continue discovery SQLservices
 echo.3) scan network for SQLservices
-echo.4) exit
+echo.4) run Management Studio with system account
+echo.5) exit
 set menu=
-choice /c 1234 /n /m "Choose a task"
+choice /c 12345 /n /m "Choose a task"
 set menu=%errorlevel%
 if errorlevel 1 set goto=fullscript
 if errorlevel 2 set goto=Scan
 if errorlevel 3 set goto=Network
-if errorlevel 4 set goto=quit
+if errorlevel 4 set goto=Scan
+if errorlevel 5 set goto=quit
 cls
 goto %goto%
 
@@ -90,18 +92,46 @@ echo ==========================================
 echo.1) generate scripts
 echo.2) use browser to scan local instances
 echo.3) use full WMI scan local instances (with sql 'MAJOR VERSION' %_major% from above)
-echo.4) use sqlcmd to scan all protocols (tcp, name pipe and local)
-echo.5) exit
+echo.4) run Management Studio with system account
+echo.5) use sqlcmd to scan all protocols (tcp, name pipe and local)
+echo.6) exit
 set menu=
 choice /c 12345 /n /m "Choose a task"
 set menu=%errorlevel%
 if errorlevel 1 set goto=fullscript
 if errorlevel 2 set goto=browser
 if errorlevel 3 set goto=fullwmi
-if errorlevel 4 set goto=Protocols
-if errorlevel 5 set goto=quit
+if errorlevel 4 set goto=Ssms
+if errorlevel 5 set goto=Protocols
+if errorlevel 6 set goto=quit
 cls
 goto %goto%
+
+:Ssms
+cls
+echo founded MsSQL instances:
+type %sfound%
+sc.exe stop PSEXESVC > nul
+echo.
+IF %ssmsvr% equ 0 ( set /p ssmsvr=please type connection string/instance name: ) ELSE (ECHO MsSQL instance: "%ssmsvr%")
+echo use following account:
+echo.1) nt authority\system
+echo.2) NT Service\SQLWRITER
+echo.3) NT Service\Winmgmt
+echo.4) NT Service\SQLSERVERAGENT
+echo.5) NT Service\MSSQLSERVER
+set menu=
+choice /c 12345 /n /m "Choose a task"
+set menu=%errorlevel%
+if errorlevel 1 set smsusr=nt authority\system
+if errorlevel 2 set smsusr=NT Service\SQLWRITER
+if errorlevel 3 set smsusr=NT Service\Winmgmt
+if errorlevel 4 set smsusr=NT Service\SQLSERVERAGENT
+if errorlevel 5 set smsusr=NT Service\MSSQLSERVER
+::echo "%cd%\psexec.exe" -u "%smsusr%" -accepteula -i -s -d ssms.exe -E -S "%ssmsvr%" -nosplash
+echo connecting with "%smsusr%" to SQL instance: "%ssmsvr%"
+call "%cd%\psexec.exe" -nobanner -u "%smsusr%" -accepteula -i -s -d ssms.exe -E -S "%ssmsvr%" -nosplash 1> nul
+goto Menu
 
 :Protocols
 set /p sqlt=please type connection string/instance name:
@@ -117,7 +147,6 @@ goto Menu
 
 :quit
 exit
-
 :fullwmi
 call cscript /Nologo discovery.vbs 2> nul || echo SQL server is not detected. Skipping
 if %_major% gtr 1 echo SQL major version is: %_major%
