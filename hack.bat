@@ -1,9 +1,9 @@
 @ECHO OFF
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ::: 				   WK				                :::
-::: 	Last update: 2020-04-02     v1.1                :::
+::: 	Last update: 2020-04-03     v1.1                :::
 :::                                                     :::
-::: please contact: kucyk87@gmail.com         			:::
+::: please contact: kucyk87 at gmail.com         			:::
 :::                        WK                           :::
 :::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 call variables.bat > nul
