@@ -56,3 +56,4 @@ sqlcmd.exe -S SQL2019s.contoso.com -h -1 -E -i C:\WK_Scripts\_Projects\LostPassw
 + variables moved to external file;
 + recovery access script saved to txt and bat formats;
 + management studio with system account (login to sql without pass);
++ vmware detection
