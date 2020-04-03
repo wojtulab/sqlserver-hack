@@ -14,8 +14,9 @@ echo.account %who% will be used (specify user inside user.txt)
 echo.
 echo --------------------------------------------
 echo domain: %domain%
-echo current hostname: %COMPUTERNAME%
+echo current hostname: %host% [ %virt% ]
 for /f "tokens=1-2*" %%A in ('net statistics workstation ^| find "Statistics since"') do echo uptime: %%C
+IF %sqlclust% geq 1 ( echo CLuster name: %_clun% with %_nodes% nodes )
 echo --------------------------------------------
 :Starting
 echo.1) generate recovery scripts
@@ -44,12 +45,12 @@ pause
 goto Starting
 
 :Scan
-FOR /F "tokens=* USEBACKQ" %%F IN (`tasklist ^| findstr sqlservr.exe ^| find /c /v ""`) DO ( SET sqlcount=%%F )
-FOR /F "tokens=* USEBACKQ" %%F IN (`sc query ^|findstr ClusSv. ^| find /c /v ""`) DO ( SET sqlclust=%%F )
 tasklist | findstr sqlservr.exe >nul && echo.SQL proccess sqlservr.exe is running. (%sqlcount% proces(s)) && set _sqlserv=1 || echo sqlservr.exe process is not running && set _sqlserv=0
 IF %sqlclust% geq 1 (
 echo.-------------------------
-echo.INFO: one or more instance could be CLUSTERED.
+echo.INFO: one or more instance could be CLUSTERED [ %_clun% ]
+echo Nodes:
+( FOR /F "tokens=2*" %%a in ('REG QUERY HKLM\Cluster\Nodes\ /s /v NodeName /t REG_SZ ^| find "REG_SZ"') DO ( echo %%b ) ) 2> nul
 IF %_cluerr% neq 1 (
 echo.Founded SQL server clusterd instances:
 for /f "tokens=4 delims= " %%a in ('cluster res ^| findstr "SQL" ^| findstr Server ^| findstr /v Agent') do (
