@@ -25,7 +25,8 @@ echo.3) scan network for SQLservices
 echo.4) run Management Studio with system account
 echo.5) exit
 set menu=
-choice /c 12345 /n /m "Choose a task"
+CHOICE /N Choose a task /C:12345 2>nul
+if errorlevel 255 choice /c 12345 /n /m "Choose a task" 2>nul
 set menu=%errorlevel%
 if errorlevel 1 set goto=fullscript
 if errorlevel 2 set goto=Scan
@@ -97,7 +98,8 @@ echo.4) run Management Studio with system account
 echo.5) use sqlcmd to scan all protocols (tcp, name pipe and local)
 echo.6) exit
 set menu=
-choice /c 12345 /n /m "Choose a task"
+CHOICE /N Choose a task /C:123456 2>nul
+if errorlevel 255 choice /c 123456 /n /m "Choose a task" 2>nul
 set menu=%errorlevel%
 if errorlevel 1 set goto=fullscript
 if errorlevel 2 set goto=browser
@@ -111,7 +113,7 @@ goto %goto%
 :Ssms
 cls
 echo founded MsSQL instances:
-type %sfound%
+findstr /v "^$" %sfound%
 sc.exe stop PSEXESVC > nul
 echo.
 IF %ssmsvr% equ 0 ( set /p ssmsvr=please type connection string/instance name: ) ELSE (ECHO MsSQL instance: "%ssmsvr%")
@@ -122,7 +124,8 @@ echo.3) NT Service\Winmgmt
 echo.4) NT Service\SQLSERVERAGENT
 echo.5) NT Service\MSSQLSERVER
 set menu=
-choice /c 12345 /n /m "Choose a task"
+CHOICE /N Choose a task /C:12345 2>nul
+if errorlevel 255 choice /c 12345 /n /m "Choose a task" 2>nul
 set menu=%errorlevel%
 if errorlevel 1 set smsusr=nt authority\system
 if errorlevel 2 set smsusr=NT Service\SQLWRITER
@@ -202,7 +205,7 @@ setlocal enabledelayedexpansion
 echo.
 echo.
 echo. Founded MsSQL in discovery:
-type %sfound%
+findstr /v "^$" %sfound%
 echo.
 echo checking connection to founded SQL instances:
 for /F "usebackq tokens=*" %%A in (%sfound%) do (
@@ -219,7 +222,8 @@ echo.3) use another instance...
 echo.4) use all instances from discovery
 
 set menu=
-choice /c 1234 /n /m "Choose a task"
+CHOICE /N Choose a task /C:1234 2>nul
+if errorlevel 255 choice /c 1234 /n /m "Choose a task" 2>nul
 set menu=%errorlevel%
 if errorlevel 1 set goto=Nextstuff1
 if errorlevel 2 set goto=Nextstuff2
@@ -249,6 +253,10 @@ echo using %sqlc%
 goto Nextstuff
 
 :Nextstuff
+set sfound=mssql_founded_test.txt
+findstr /v "^$" "%sfound%"
+findstr /v "^$" "%sfound%" > "%sfound%2"
+move /Y "%sfound%2" "%sfound%"
 cls
 if %_browser% equ 1 (
 echo ----------------REMEMBER to use: -------------------------
