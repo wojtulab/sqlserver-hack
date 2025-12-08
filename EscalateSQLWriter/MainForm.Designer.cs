@@ -19,6 +19,8 @@ namespace EscalateSQLWriter
         private System.Windows.Forms.RadioButton rbWinUser;
         private System.Windows.Forms.TextBox txtPassword;
         private System.Windows.Forms.Label lblPass;
+        private System.Windows.Forms.Label lblAuthor;
+        private System.Windows.Forms.ComboBox cmbLanguage;
 
         protected override void Dispose(bool disposing)
         {
@@ -42,6 +44,8 @@ namespace EscalateSQLWriter
             this.lblPass = new System.Windows.Forms.Label();
             this.rbSqlUser = new System.Windows.Forms.RadioButton();
             this.rbWinUser = new System.Windows.Forms.RadioButton();
+            this.lblAuthor = new System.Windows.Forms.Label();
+            this.cmbLanguage = new System.Windows.Forms.ComboBox();
             this.grpMode.SuspendLayout();
             this.SuspendLayout();
             //
@@ -96,7 +100,7 @@ namespace EscalateSQLWriter
             this.txtLog.Location = new System.Drawing.Point(12, 222);
             this.txtLog.Name = "txtLog";
             this.txtLog.ReadOnly = true;
-            this.txtLog.Size = new System.Drawing.Size(560, 227);
+            this.txtLog.Size = new System.Drawing.Size(560, 207);
             this.txtLog.TabIndex = 4;
             this.txtLog.Text = "";
             //
@@ -162,11 +166,38 @@ namespace EscalateSQLWriter
             this.rbWinUser.Text = "Obecny użytkownik Windows";
             this.rbWinUser.UseVisualStyleBackColor = true;
             //
+            // lblAuthor
+            //
+            this.lblAuthor.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.lblAuthor.AutoSize = true;
+            this.lblAuthor.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Italic, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.lblAuthor.Location = new System.Drawing.Point(12, 439);
+            this.lblAuthor.Name = "lblAuthor";
+            this.lblAuthor.Size = new System.Drawing.Size(135, 13);
+            this.lblAuthor.TabIndex = 7;
+            this.lblAuthor.Text = "Wojciech Kuncewicz 2026";
+            //
+            // cmbLanguage
+            //
+            this.cmbLanguage.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.cmbLanguage.FormattingEnabled = true;
+            this.cmbLanguage.Items.AddRange(new object[] {
+            "Polski",
+            "English"});
+            this.cmbLanguage.Location = new System.Drawing.Point(451, 12);
+            this.cmbLanguage.Name = "cmbLanguage";
+            this.cmbLanguage.Size = new System.Drawing.Size(121, 21);
+            this.cmbLanguage.TabIndex = 8;
+            this.cmbLanguage.SelectedIndex = 0;
+            this.cmbLanguage.SelectedIndexChanged += new System.EventHandler(this.cmbLanguage_SelectedIndexChanged);
+            //
             // MainForm
             //
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(584, 461);
+            this.Controls.Add(this.cmbLanguage);
+            this.Controls.Add(this.lblAuthor);
             this.Controls.Add(this.grpMode);
             this.Controls.Add(this.lblStatus);
             this.Controls.Add(this.txtLog);
