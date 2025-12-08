@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net472</TargetFramework>
+    <RootNamespace>EscalateSQLWriter</RootNamespace>
+    <AssemblyName>EscalateSQLWriter</AssemblyName>
+    <!-- Allow unsafe blocks if needed, though not used here -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <!-- Target latest language version compatible -->
+    <LangVersion>latest</LangVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!--
+      System.ServiceProcess is required for ServiceController.
+      In .NET Framework it is in GAC/Standard Libs, but for SDK style project targeting net472
+      explicit reference is good or rely on default framework assembly references.
+      Registry is in mscorlib/System.
+    -->
+    <Reference Include="System.ServiceProcess" />
+  </ItemGroup>
+
+  <!-- If the user opens this in a modern VS with .NET Core installed, they might want to target net6.0-windows too.
+       Uncomment below to multi-target. -->
+  <!-- <TargetFrameworks>net472;net6.0-windows</TargetFrameworks> -->
+  <!-- <ItemGroup Condition="'$(TargetFramework)' == 'net6.0-windows'">
+      <PackageReference Include="System.ServiceProcess.ServiceController" Version="7.0.0" />
+      <PackageReference Include="Microsoft.Win32.Registry" Version="5.0.0" />
+  </ItemGroup> -->
+
+</Project>
