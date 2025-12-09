@@ -474,53 +474,76 @@ namespace EscalateSQLWriter
             if (cmbServices.SelectedItem == null) return;
             string serviceName = cmbServices.SelectedItem.ToString();
 
-            // Get Port logic
+            string port = GetSqlPort(serviceName);
+            if (port != "?" && port != null)
+                lblPort.Text = GetConfigText("MsgPortFound") + port;
+            else
+                lblPort.Text = GetConfigText("MsgPortErr");
+        }
+
+        private string GetSqlPort(string serviceName)
+        {
             try
             {
                 string instanceName = "MSSQLSERVER";
-                if (serviceName != "MSSQLSERVER")
+                if (serviceName != "MSSQLSERVER" && serviceName.StartsWith("MSSQL$"))
                 {
                     instanceName = serviceName.Substring(6); // Remove MSSQL$
                 }
 
-                // Registry path for port depends on instance
-                // HKLM\SOFTWARE\Microsoft\Microsoft SQL Server\[InstanceName]\MSSQLServer\SuperSocketNetLib\Tcp\IPAll
-                // Need to find internal SQL instance name mapping if needed, but often it matches.
-                // Or check HKLM\SOFTWARE\Microsoft\Microsoft SQL Server\Instance Names\SQL to map ServiceInstance -> InternalInstance
+                // 1. Resolve Internal Name (e.g., MSSQL15.MSSQLSERVER)
+                // Try 64-bit Registry first (Standard for modern SQL)
+                string internalName = GetSqlInternalName(instanceName, RegistryView.Registry64);
+                if (internalName == null)
+                    internalName = GetSqlInternalName(instanceName, RegistryView.Registry32);
 
-                string regRoot = @"SOFTWARE\Microsoft\Microsoft SQL Server";
-                string internalInstanceName = instanceName;
+                if (internalName == null) return "?";
 
-                using (RegistryKey key = Registry.LocalMachine.OpenSubKey(Path.Combine(regRoot, "Instance Names", "SQL")))
+                // 2. Read Port from Internal Name key
+                string port = GetSqlPortFromInternalName(internalName, RegistryView.Registry64);
+                if (port == null)
+                    port = GetSqlPortFromInternalName(internalName, RegistryView.Registry32);
+
+                return port;
+            }
+            catch
+            {
+                return "?";
+            }
+        }
+
+        private string GetSqlInternalName(string instanceName, RegistryView view)
+        {
+            try {
+                using (var baseKey = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, view))
+                using (var key = baseKey.OpenSubKey(@"SOFTWARE\Microsoft\Microsoft SQL Server\Instance Names\SQL"))
                 {
                     if (key != null)
-                    {
-                        var val = key.GetValue(instanceName);
-                        if (val != null) internalInstanceName = val.ToString();
-                    }
+                        return key.GetValue(instanceName) as string;
                 }
+            } catch {}
+            return null;
+        }
 
-                string tcpPath = Path.Combine(regRoot, internalInstanceName, "MSSQLServer", "SuperSocketNetLib", "Tcp", "IPAll");
-                using (RegistryKey key = Registry.LocalMachine.OpenSubKey(tcpPath))
+        private string GetSqlPortFromInternalName(string internalName, RegistryView view)
+        {
+            try {
+                // SOFTWARE\Microsoft\Microsoft SQL Server\[InternalName]\MSSQLServer\SuperSocketNetLib\Tcp\IPAll
+                string path = $@"SOFTWARE\Microsoft\Microsoft SQL Server\{internalName}\MSSQLServer\SuperSocketNetLib\Tcp\IPAll";
+                using (var baseKey = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, view))
+                using (var key = baseKey.OpenSubKey(path))
                 {
                      if (key != null)
                      {
                          var port = key.GetValue("TcpPort");
                          var dynamicPort = key.GetValue("TcpDynamicPorts");
 
-                         string portDisplay = port != null ? port.ToString() : (dynamicPort != null ? dynamicPort.ToString() : "?");
-                         lblPort.Text = GetConfigText("MsgPortFound") + portDisplay;
-                     }
-                     else
-                     {
-                         lblPort.Text = GetConfigText("MsgPortErr");
+                         if (port != null && !string.IsNullOrEmpty(port.ToString())) return port.ToString();
+                         if (dynamicPort != null && !string.IsNullOrEmpty(dynamicPort.ToString())) return dynamicPort.ToString();
                      }
                 }
-            }
-            catch
-            {
-                lblPort.Text = GetConfigText("MsgPortErr");
-            }
+            } catch {}
+            return null;
         }
 
         private void btnCheckAccess_Click(object sender, EventArgs e)
