@@ -491,20 +491,44 @@ namespace EscalateSQLWriter
                     instanceName = serviceName.Substring(6); // Remove MSSQL$
                 }
 
-                // 1. Resolve Internal Name (e.g., MSSQL15.MSSQLSERVER)
-                // Try 64-bit Registry first (Standard for modern SQL)
+                // 1. Resolve Internal Name (Standard for 2012+)
                 string internalName = GetSqlInternalName(instanceName, RegistryView.Registry64);
                 if (internalName == null)
                     internalName = GetSqlInternalName(instanceName, RegistryView.Registry32);
 
-                if (internalName == null) return "?";
+                string port = null;
 
-                // 2. Read Port from Internal Name key
-                string port = GetSqlPortFromInternalName(internalName, RegistryView.Registry64);
-                if (port == null)
-                    port = GetSqlPortFromInternalName(internalName, RegistryView.Registry32);
+                if (internalName != null)
+                {
+                    // 2. Read from Internal Name
+                    port = GetSqlPortFromPath($@"SOFTWARE\Microsoft\Microsoft SQL Server\{internalName}\MSSQLServer\SuperSocketNetLib\Tcp\IPAll", RegistryView.Registry64);
+                    if (port == null)
+                        port = GetSqlPortFromPath($@"SOFTWARE\Microsoft\Microsoft SQL Server\{internalName}\MSSQLServer\SuperSocketNetLib\Tcp\IPAll", RegistryView.Registry32);
+                }
 
-                return port;
+                if (port != null) return port;
+
+                // 3. Fallback for Legacy/Older Versions (2000/2005/2008) or direct path
+                // Case: Default Instance
+                if (instanceName == "MSSQLSERVER")
+                {
+                    port = GetSqlPortFromPath(@"SOFTWARE\Microsoft\MSSQLServer\MSSQLServer\SuperSocketNetLib\Tcp\IPAll", RegistryView.Registry64);
+                    if (port == null) port = GetSqlPortFromPath(@"SOFTWARE\Microsoft\MSSQLServer\MSSQLServer\SuperSocketNetLib\Tcp\IPAll", RegistryView.Registry32);
+                    if (port != null) return port;
+
+                    port = GetSqlPortFromPath(@"SOFTWARE\Microsoft\Microsoft SQL Server\MSSQLServer\SuperSocketNetLib\Tcp\IPAll", RegistryView.Registry64);
+                    if (port == null) port = GetSqlPortFromPath(@"SOFTWARE\Microsoft\Microsoft SQL Server\MSSQLServer\SuperSocketNetLib\Tcp\IPAll", RegistryView.Registry32);
+                    if (port != null) return port;
+                }
+                else
+                {
+                    // Case: Named Instance (Direct)
+                    string namedPath = $@"SOFTWARE\Microsoft\Microsoft SQL Server\{instanceName}\MSSQLServer\SuperSocketNetLib\Tcp\IPAll";
+                    port = GetSqlPortFromPath(namedPath, RegistryView.Registry64);
+                    if (port == null) port = GetSqlPortFromPath(namedPath, RegistryView.Registry32);
+                }
+
+                return port ?? "?";
             }
             catch
             {
@@ -525,13 +549,11 @@ namespace EscalateSQLWriter
             return null;
         }
 
-        private string GetSqlPortFromInternalName(string internalName, RegistryView view)
+        private string GetSqlPortFromPath(string registryPath, RegistryView view)
         {
             try {
-                // SOFTWARE\Microsoft\Microsoft SQL Server\[InternalName]\MSSQLServer\SuperSocketNetLib\Tcp\IPAll
-                string path = $@"SOFTWARE\Microsoft\Microsoft SQL Server\{internalName}\MSSQLServer\SuperSocketNetLib\Tcp\IPAll";
                 using (var baseKey = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, view))
-                using (var key = baseKey.OpenSubKey(path))
+                using (var key = baseKey.OpenSubKey(registryPath))
                 {
                      if (key != null)
                      {
