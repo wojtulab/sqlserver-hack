@@ -12,6 +12,7 @@ namespace EscalateSQLWriter
         private System.Windows.Forms.ComboBox cmbServices;
         private System.Windows.Forms.Label lblService;
         private System.Windows.Forms.Button btnExploit;
+        private System.Windows.Forms.Button btnCheckAccess; // New Button
         private System.Windows.Forms.RichTextBox txtLog;
         private System.Windows.Forms.Label lblStatus;
         private System.Windows.Forms.GroupBox grpMode;
@@ -21,6 +22,7 @@ namespace EscalateSQLWriter
         private System.Windows.Forms.Label lblPass;
         private System.Windows.Forms.Label lblAuthor;
         private System.Windows.Forms.ComboBox cmbLanguage;
+        private System.Windows.Forms.Label lblPort; // New Label
 
         protected override void Dispose(bool disposing)
         {
@@ -37,6 +39,7 @@ namespace EscalateSQLWriter
             this.cmbServices = new System.Windows.Forms.ComboBox();
             this.lblService = new System.Windows.Forms.Label();
             this.btnExploit = new System.Windows.Forms.Button();
+            this.btnCheckAccess = new System.Windows.Forms.Button();
             this.txtLog = new System.Windows.Forms.RichTextBox();
             this.lblStatus = new System.Windows.Forms.Label();
             this.grpMode = new System.Windows.Forms.GroupBox();
@@ -46,6 +49,7 @@ namespace EscalateSQLWriter
             this.rbWinUser = new System.Windows.Forms.RadioButton();
             this.lblAuthor = new System.Windows.Forms.Label();
             this.cmbLanguage = new System.Windows.Forms.ComboBox();
+            this.lblPort = new System.Windows.Forms.Label();
             this.grpMode.SuspendLayout();
             this.SuspendLayout();
             //
@@ -53,9 +57,9 @@ namespace EscalateSQLWriter
             //
             this.btnScan.Location = new System.Drawing.Point(12, 12);
             this.btnScan.Name = "btnScan";
-            this.btnScan.Size = new System.Drawing.Size(120, 30);
+            this.btnScan.Size = new System.Drawing.Size(150, 30);
             this.btnScan.TabIndex = 0;
-            this.btnScan.Text = "1. Skanuj System";
+            this.btnScan.Text = "1. Service Health Check";
             this.btnScan.UseVisualStyleBackColor = true;
             this.btnScan.Click += new System.EventHandler(this.btnScan_Click);
             //
@@ -66,7 +70,7 @@ namespace EscalateSQLWriter
             this.lblService.Name = "lblService";
             this.lblService.Size = new System.Drawing.Size(115, 13);
             this.lblService.TabIndex = 1;
-            this.lblService.Text = "2. Wybierz usługę SQL:";
+            this.lblService.Text = "2. Select SQL Service:";
             //
             // cmbServices
             //
@@ -77,6 +81,27 @@ namespace EscalateSQLWriter
             this.cmbServices.Name = "cmbServices";
             this.cmbServices.Size = new System.Drawing.Size(250, 21);
             this.cmbServices.TabIndex = 2;
+            this.cmbServices.SelectedIndexChanged += new System.EventHandler(this.cmbServices_SelectedIndexChanged);
+            //
+            // lblPort
+            //
+            this.lblPort.AutoSize = true;
+            this.lblPort.Location = new System.Drawing.Point(400, 55);
+            this.lblPort.Name = "lblPort";
+            this.lblPort.Size = new System.Drawing.Size(32, 13);
+            this.lblPort.TabIndex = 9;
+            this.lblPort.Text = "Port: -";
+            //
+            // btnCheckAccess
+            //
+            this.btnCheckAccess.Enabled = false;
+            this.btnCheckAccess.Location = new System.Drawing.Point(470, 50);
+            this.btnCheckAccess.Name = "btnCheckAccess";
+            this.btnCheckAccess.Size = new System.Drawing.Size(100, 25);
+            this.btnCheckAccess.TabIndex = 10;
+            this.btnCheckAccess.Text = "Check Access";
+            this.btnCheckAccess.UseVisualStyleBackColor = true;
+            this.btnCheckAccess.Click += new System.EventHandler(this.btnCheckAccess_Click);
             //
             // btnExploit
             //
@@ -85,7 +110,7 @@ namespace EscalateSQLWriter
             this.btnExploit.Name = "btnExploit";
             this.btnExploit.Size = new System.Drawing.Size(371, 35);
             this.btnExploit.TabIndex = 3;
-            this.btnExploit.Text = "4. Uruchom Exploit";
+            this.btnExploit.Text = "4. Repair Configuration";
             this.btnExploit.UseVisualStyleBackColor = true;
             this.btnExploit.Click += new System.EventHandler(this.btnExploit_Click);
             //
@@ -123,7 +148,7 @@ namespace EscalateSQLWriter
             this.grpMode.Size = new System.Drawing.Size(371, 81);
             this.grpMode.TabIndex = 6;
             this.grpMode.TabStop = false;
-            this.grpMode.Text = "3. Wybierz cel ataku";
+            this.grpMode.Text = "3. Select Repair Mode";
             //
             // txtPassword
             //
@@ -139,18 +164,18 @@ namespace EscalateSQLWriter
             this.lblPass.AutoSize = true;
             this.lblPass.Location = new System.Drawing.Point(137, 51);
             this.lblPass.Name = "lblPass";
-            this.lblPass.Size = new System.Drawing.Size(39, 13);
+            this.lblPass.Size = new System.Drawing.Size(56, 13);
             this.lblPass.TabIndex = 2;
-            this.lblPass.Text = "Hasło:";
+            this.lblPass.Text = "Password:";
             //
             // rbSqlUser
             //
             this.rbSqlUser.AutoSize = true;
             this.rbSqlUser.Location = new System.Drawing.Point(7, 49);
             this.rbSqlUser.Name = "rbSqlUser";
-            this.rbSqlUser.Size = new System.Drawing.Size(124, 17);
+            this.rbSqlUser.Size = new System.Drawing.Size(126, 17);
             this.rbSqlUser.TabIndex = 1;
-            this.rbSqlUser.Text = "Konto SQL (rootwk)";
+            this.rbSqlUser.Text = "SQL Account (Admin)";
             this.rbSqlUser.UseVisualStyleBackColor = true;
             this.rbSqlUser.CheckedChanged += new System.EventHandler(this.rbSqlUser_CheckedChanged);
             //
@@ -160,10 +185,10 @@ namespace EscalateSQLWriter
             this.rbWinUser.Checked = true;
             this.rbWinUser.Location = new System.Drawing.Point(7, 20);
             this.rbWinUser.Name = "rbWinUser";
-            this.rbWinUser.Size = new System.Drawing.Size(165, 17);
+            this.rbWinUser.Size = new System.Drawing.Size(133, 17);
             this.rbWinUser.TabIndex = 0;
             this.rbWinUser.TabStop = true;
-            this.rbWinUser.Text = "Obecny użytkownik Windows";
+            this.rbWinUser.Text = "Current Windows User";
             this.rbWinUser.UseVisualStyleBackColor = true;
             //
             // lblAuthor
@@ -195,7 +220,9 @@ namespace EscalateSQLWriter
             //
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(584, 461);
+            this.ClientSize = new System.Drawing.Size(600, 470);
+            this.Controls.Add(this.btnCheckAccess);
+            this.Controls.Add(this.lblPort);
             this.Controls.Add(this.cmbLanguage);
             this.Controls.Add(this.lblAuthor);
             this.Controls.Add(this.grpMode);
@@ -206,7 +233,7 @@ namespace EscalateSQLWriter
             this.Controls.Add(this.lblService);
             this.Controls.Add(this.btnScan);
             this.Name = "MainForm";
-            this.Text = "Escalate SQL Writer Tool";
+            this.Text = "SQL Writer Maintenance Tool";
             this.grpMode.ResumeLayout(false);
             this.grpMode.PerformLayout();
             this.ResumeLayout(false);
